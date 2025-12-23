@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <linearGradient id="terminalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a855f7;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="screenGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e1b4b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0f0a1a;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Terminal Window -->
+  <rect x="50" y="80" width="300" height="240" rx="16" fill="url(#terminalGrad)" />
+  <rect x="60" y="110" width="280" height="200" rx="8" fill="url(#screenGrad)" />
+  
+  <!-- Window Controls -->
+  <circle cx="80" cy="95" r="6" fill="#ef4444" />
+  <circle cx="100" cy="95" r="6" fill="#eab308" />
+  <circle cx="120" cy="95" r="6" fill="#22c55e" />
+  
+  <!-- Terminal Lines -->
+  <rect x="80" y="130" width="60" height="8" rx="4" fill="#6366f1" opacity="0.8" />
+  <rect x="150" y="130" width="120" height="8" rx="4" fill="#a78bfa" opacity="0.6" />
+  
+  <rect x="80" y="155" width="40" height="8" rx="4" fill="#22c55e" opacity="0.8" />
+  <rect x="130" y="155" width="80" height="8" rx="4" fill="#e2e8f0" opacity="0.4" />
+  
+  <rect x="80" y="180" width="50" height="8" rx="4" fill="#6366f1" opacity="0.8" />
+  <rect x="140" y="180" width="100" height="8" rx="4" fill="#a78bfa" opacity="0.6" />
+  
+  <rect x="80" y="205" width="30" height="8" rx="4" fill="#eab308" opacity="0.8" />
+  <rect x="120" y="205" width="70" height="8" rx="4" fill="#e2e8f0" opacity="0.4" />
+  
+  <!-- Blinking Cursor -->
+  <rect x="80" y="235" width="12" height="16" rx="2" fill="#a855f7">
+    <animate attributeName="opacity" values="1;0;1" dur="1s" repeatCount="indefinite" />
+  </rect>
+  
+  <!-- Orbital Ring -->
+  <ellipse cx="200" cy="200" rx="180" ry="40" fill="none" stroke="url(#terminalGrad)" stroke-width="2" opacity="0.3" transform="rotate(-15, 200, 200)" />
+  
+  <!-- Small Orbiting Dot -->
+  <circle r="8" fill="#a855f7">
+    <animateMotion dur="4s" repeatCount="indefinite">
+      <mpath href="#orbitPath" />
+    </animateMotion>
+  </circle>
+  
+  <path id="orbitPath" d="M 20,200 A 180,40 -15 1,1 380,200 A 180,40 -15 1,1 20,200" fill="none" />
+</svg>

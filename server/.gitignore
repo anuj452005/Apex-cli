@@ -32,3 +32,5 @@ tmp/
 .env
 .env.local
 /src/generated/prisma
+
+/src/generated/prisma
