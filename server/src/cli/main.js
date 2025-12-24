@@ -6,7 +6,7 @@ import boxen from "boxen";
 
 import figlet from "figlet";
 import {Command} from "commander";
-import { login } from "./commands/auth/login.js";
+import { login, logout, whoami } from "./commands/auth/login.js";
 
 dotenv.config();
 
@@ -23,7 +23,10 @@ async function main(){
   console.log(chalk.gray("A Cli based AI tool \n"));
   const program =new Command("apex");
 
-  program.version("0.0.1").description("A Cli based AI tool").addCommand(login)
+  program.version("0.0.1").description("A Cli based AI tool")
+    .addCommand(login)
+    .addCommand(logout)
+    .addCommand(whoami)
 
 
   program.action((options)=>{
