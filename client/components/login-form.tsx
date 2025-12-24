@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -23,17 +23,25 @@ import { useState } from "react";
 
 
 
-
 export function LoginForm() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [isLoading, setIsLoading] = useState(false);
 
     const onSocialLogin = async (provider: "github" | "google") => {
         setIsLoading(true);
         try {
+            // Get callback URL from query params or use default
+            const callbackUrl = searchParams.get("callbackUrl");
+            // If there's a callback URL, use it directly; otherwise use the sign-in page
+            // The sign-in page will then handle redirecting to the callback URL after auth
+            const finalCallbackUrl = callbackUrl
+                ? `http://localhost:3000/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`
+                : process.env.NEXT_PUBLIC_AUTH_CALLBACK_URL || "http://localhost:3000";
+
             await authClient.signIn.social({
                 provider,
-                callbackURL: process.env.NEXT_PUBLIC_AUTH_CALLBACK_URL || "http://localhost:3000",
+                callbackURL: finalCallbackUrl,
             });
         } catch (error) {
             toast.error("Sign in failed. Please try again.");

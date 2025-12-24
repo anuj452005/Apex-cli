@@ -13,6 +13,7 @@ export const auth = betterAuth({
         deviceAuthorization({
             expiresIn: "30m",
             interval : "5s",
+            verificationUri: "http://localhost:3000/device",
         })
     ],
     socialProviders:{

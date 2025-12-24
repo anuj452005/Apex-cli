@@ -2,15 +2,59 @@
 import { authClient } from "@/lib/auth-client"
 import type React from "react"
 
-import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useState, useEffect } from "react"
 import { ShieldAlert } from "lucide-react"
+import { Spinner } from "@/components/ui/spinner"
 
 export default function DeviceAuthorizationPage() {
+  const { data, isPending } = authClient.useSession()
   const [userCode, setUserCode] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+
+  // Redirect to sign-in if not authenticated
+  useEffect(() => {
+    if (!isPending && !data?.session && !data?.user) {
+      // Store current URL to redirect back after login
+      const currentUrl = window.location.href
+      const callbackUrl = encodeURIComponent(currentUrl)
+      router.push(`/sign-in?callbackUrl=${callbackUrl}`)
+    }
+  }, [data, isPending, router])
+
+  // Pre-fill user code from URL if present
+  useEffect(() => {
+    const codeFromUrl = searchParams.get("user_code")
+    if (codeFromUrl) {
+      let formattedCode = codeFromUrl.toUpperCase().replace(/[^A-Z0-9]/g, "")
+      if (formattedCode.length > 4) {
+        formattedCode = formattedCode.slice(0, 4) + "-" + formattedCode.slice(4, 8)
+      }
+      setUserCode(formattedCode)
+    }
+  }, [searchParams])
+
+  // Show loading while checking auth
+  if (isPending) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-background">
+        <Spinner />
+      </div>
+    )
+  }
+
+  // Don't render if not authenticated (will redirect)
+  if (!data?.session && !data?.user) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-background">
+        <Spinner />
+        <p className="text-muted-foreground mt-4">Redirecting to sign in...</p>
+      </div>
+    )
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

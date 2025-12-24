@@ -7,6 +7,9 @@ import boxen from "boxen";
 import figlet from "figlet";
 import {Command} from "commander";
 import { login, logout, whoami } from "./commands/auth/login.js";
+import { chat } from "./commands/chat.js";
+import { agent } from "./commands/agent.js";
+import { config } from "./commands/config.js";
 
 dotenv.config();
 
@@ -27,6 +30,9 @@ async function main(){
     .addCommand(login)
     .addCommand(logout)
     .addCommand(whoami)
+    .addCommand(chat)
+    .addCommand(agent)
+    .addCommand(config)
 
 
   program.action((options)=>{
@@ -41,3 +47,4 @@ main().catch((err)=>{
     console.log(chalk.red("Error while running Apex cli",err)); 
     process.exit();
 });
+
