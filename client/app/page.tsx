@@ -1,4 +1,5 @@
 "use client"
+import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import { authClient } from "@/lib/auth-client"
@@ -8,16 +9,18 @@ export default function Home() {
   const { data, isPending } = authClient.useSession()
   const router = useRouter()
 
+  useEffect(() => {
+    if (!isPending && !data?.session && !data?.user) {
+      router.push("/sign-in")
+    }
+  }, [data, isPending, router])
+
   if (isPending) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <Spinner />
       </div>
     )
-  }
-
-  if (!data?.session && !data?.user) {
-    router.push("/sign-in")
   }
 
   return (
