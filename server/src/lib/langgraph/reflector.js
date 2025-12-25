@@ -103,10 +103,27 @@ export async function reflectorNode(state) {
     }
     
     // ─────────────────────────────────────────────────────────────────────────
-    // STEP 2: GET CURRENT STEP RESULT
+    // STEP 1.5: QUICK FINISH FOR SIMPLE QUERIES
     // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * For simple queries (greetings, small talk), we skip the LLM reflection
+     * and immediately mark as finished if the step was successful.
+     */
+    const isSimpleQuery = state.plan?.query_type === "simple";
     const currentStep = getCurrentStep(state);
     const stepResult = currentStep ? state.stepResults[currentStep.id] : null;
+    
+    if (isSimpleQuery && stepResult?.success) {
+      console.log(chalk.green("   ✅ Simple query completed successfully"));
+      return {
+        reflection: {
+          assessment: "Direct response provided successfully",
+          success: true,
+          decision: "finish",
+          reasoning: "Simple query handled with direct response",
+        },
+      };
+    }
     
     if (!stepResult) {
       // No result yet - step hasn't been executed

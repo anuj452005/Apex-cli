@@ -104,6 +104,46 @@ export async function plannerNode(state) {
     console.log(chalk.gray(`   Task: "${userRequest.slice(0, 50)}..."`));
     
     // ─────────────────────────────────────────────────────────────────────────
+    // STEP 1.5: QUICK DETECTION FOR SIMPLE QUERIES
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * For simple conversational queries (greetings, small talk), we skip
+     * the expensive LLM planning call and return a simple 1-step plan.
+     * This makes responses much faster for casual interactions.
+     */
+    const simplePatterns = [
+      /^(hi|hey|hello|helo|hola|yo)[\s!.,?]*$/i,
+      /^good\s*(morning|afternoon|evening|night)[\s!.,?]*$/i,
+      /^(hi|hey|hello)\s*(there|buddy|friend)?[\s!.,?]*$/i,
+      /^(how\s*are\s*you|how's\s*it\s*going|what's\s*up|sup)[\s!.,?]*$/i,
+      /^(thanks|thank\s*you|thx|ty)[\s!.,?]*$/i,
+      /^(ok|okay|got\s*it|understood|sure|yep|yes|no)[\s!.,?]*$/i,
+      /^(who|what)\s*(are\s*you|is\s*this)[\s!.,?]*$/i,
+      /^what\s*(can\s*you\s*do|do\s*you\s*do)[\s!.,?]*$/i,
+    ];
+    
+    const isSimpleQuery = simplePatterns.some(pattern => pattern.test(userRequest.trim()));
+    
+    if (isSimpleQuery) {
+      console.log(chalk.green(`   ✅ Simple query detected - responding directly`));
+      
+      const simplePlan = {
+        goal: "Respond to user's message",
+        query_type: "simple",
+        steps: [
+          { id: 1, description: "Respond directly to the user", tools_needed: [], status: "pending" }
+        ],
+        estimated_complexity: "simple",
+      };
+      
+      return {
+        plan: simplePlan,
+        currentStep: 0,
+        iterations: state.iterations + 1,
+      };
+    }
+    
+    // ─────────────────────────────────────────────────────────────────────────
     // STEP 2: PREPARE THE PROMPT
     // ─────────────────────────────────────────────────────────────────────────
     /**

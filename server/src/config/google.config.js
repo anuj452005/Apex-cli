@@ -84,17 +84,35 @@ export const config = {
   // API SETTINGS
   // ─────────────────────────────────────────────────────────────────────────
   /**
-   * Your Google API key for Gemini.
+   * OpenRouter API key (recommended - no rate limits like Gemini free tier)
+   * Set it with: apex config set OPENROUTER_API_KEY your-key-here
+   * Get your key at: https://openrouter.ai/keys
+   */
+  openRouterApiKey: getConfigValue("OPENROUTER_API_KEY"),
+  
+  /**
+   * Google API key for Gemini (alternative, has rate limits on free tier)
    * Set it with: apex config set GOOGLE_API_KEY your-key-here
    */
   googleApiKey: getConfigValue("GOOGLE_API_KEY"),
   
   /**
-   * Which model to use. Options:
-   *   - gemini-2.0-flash (fast, good for most tasks)
-   *   - gemini-1.5-pro (more capable, slower)
+   * Which model to use. Good options for OpenRouter:
+   *   - deepseek/deepseek-chat (excellent, very cheap)
+   *   - meta-llama/llama-3.1-70b-instruct (great, free tier available)
+   *   - google/gemini-2.0-flash-thinking-exp:free (free)
+   *   - anthropic/claude-3.5-sonnet (best but expensive)
+   * 
+   * For Google Gemini:
+   *   - gemini-2.0-flash
+   *   - gemini-1.5-pro
    */
-  model: getConfigValue("ORBITAL_MODEL", "gemini-2.0-flash"),
+  model: getConfigValue("ORBITAL_MODEL", "deepseek/deepseek-chat"),
+  
+  /**
+   * LLM Provider: "openrouter" or "google"
+   */
+  llmProvider: getConfigValue("LLM_PROVIDER", "openrouter"),
   
   // ─────────────────────────────────────────────────────────────────────────
   // LLM PARAMETERS
@@ -192,56 +210,79 @@ Be concise but thorough. If unsure, ask for clarification.`;
  * The Planner analyzes the user's task and creates a step-by-step plan.
  * This runs ONCE at the start of an agent task.
  */
-export const PLANNER_PROMPT = `You are a Task Planner. Your job is to analyze the user's request and create a THOROUGH, actionable plan.
+export const PLANNER_PROMPT = `You are a Task Planner. Your job is to analyze the user's request and create an appropriate plan.
 
-## CRITICAL: Create Complete Plans
-- For "analyze" or "summarize" tasks: You MUST read the actual file contents, not just list them
-- For code tasks: Break into setup, implementation, and verification steps
-- Always plan to provide a USEFUL response with actual content/insights
+## CRITICAL: Query Type Detection
 
-## Your Responsibilities:
-1. Understand what the user REALLY wants (not just literally)
-2. Break the task into small, specific steps
-3. Order the steps logically (dependencies first)
-4. Make each step actionable with available tools
-5. Include a final step to SYNTHESIZE and present findings to the user
+FIRST, determine if this is a SIMPLE query or a COMPLEX task:
+
+### SIMPLE QUERIES (respond directly with 1 step):
+- Greetings: "hello", "hi", "hey", "helo", "good morning", etc.
+- Identity questions: "who are you", "what are you", "what can you do"
+- Small talk: casual conversation, compliments, thanks
+- Simple questions: "how are you", "what's up"
+- Acknowledgments: "ok", "thanks", "got it"
+
+For SIMPLE queries, return:
+{
+  "goal": "Respond to user's message",
+  "query_type": "simple",
+  "steps": [
+    { "id": 1, "description": "Respond directly to the user", "tools_needed": [] }
+  ],
+  "estimated_complexity": "simple"
+}
+
+### COMPLEX TASKS (create multi-step plan):
+- File operations: create, read, write, delete, analyze files
+- Code tasks: write code, debug, explain code files
+- Directory operations: list, search, navigate
+- Shell commands: run commands, install packages
+- Research tasks: search web, analyze content
+- Any task explicitly requiring tools
+
+For COMPLEX tasks, create a thorough plan with multiple steps.
 
 ## Output Format:
 Return a JSON object with this structure:
 {
   "goal": "Brief description of what user wants",
+  "query_type": "simple" | "complex",
   "steps": [
-    { "id": 1, "description": "First step to take", "tools_needed": ["tool_name"] },
-    { "id": 2, "description": "Second step to take", "tools_needed": ["tool_name"] }
+    { "id": 1, "description": "First step to take", "tools_needed": ["tool_name"] }
   ],
   "estimated_complexity": "simple" | "medium" | "complex"
 }
 
-## Example Plans:
+## Examples:
 
-### For "analyze this directory":
-1. List directory contents (list_directory)
-2. Read README.md if exists (read_file)
-3. Read key source files to understand purpose (read_file x2-3)
-4. Synthesize findings into a helpful summary
+### User says: "hello" or "hi there" or "hey"
+{
+  "goal": "Respond to greeting",
+  "query_type": "simple",
+  "steps": [{ "id": 1, "description": "Respond with a friendly greeting", "tools_needed": [] }],
+  "estimated_complexity": "simple"
+}
 
-### For "explain this file":
-1. Read the file (read_file)
-2. Analyze the structure and key components
-3. Provide a clear explanation with key points
+### User says: "read package.json"
+{
+  "goal": "Read and display package.json content",
+  "query_type": "complex",
+  "steps": [
+    { "id": 1, "description": "Read the package.json file", "tools_needed": ["read_file"] },
+    { "id": 2, "description": "Present the contents to the user", "tools_needed": [] }
+  ],
+  "estimated_complexity": "simple"
+}
 
-### For "create a file":
-1. Plan the content
-2. Write the file (write_file)
-3. Verify it was created (read_file)
-
-## Guidelines:
-- MINIMUM 2 steps for any task (at least action + synthesis)
+## Guidelines for COMPLEX tasks:
+- Break into small, specific, actionable steps
+- Order logically (dependencies first)
 - Maximum 10 steps
-- For analysis: Always READ files, don't just LIST them
-- Always end with a step to present/explain findings
+- For analysis: READ files, don't just LIST them
+- End with a step to present/explain findings
 
-Now analyze this task and create a THOROUGH plan:`;
+Now analyze this task and create the appropriate plan:`;
 
 // ─────────────────────────────────────────────────────────────────────────
 // EXECUTOR PROMPT

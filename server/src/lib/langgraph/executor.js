@@ -121,7 +121,60 @@ export async function executorNode(state) {
     }
     
     // ─────────────────────────────────────────────────────────────────────────
-    // STEP 3: PREPARE THE PROMPT
+    // STEP 2.5: CHECK FOR SIMPLE QUERY (DIRECT RESPONSE)
+    // ─────────────────────────────────────────────────────────────────────────
+    /**
+     * For simple queries, we use a simplified prompt that focuses on
+     * responding naturally to the user's message without tool use.
+     */
+    const isSimpleQuery = state.plan?.query_type === "simple";
+    
+    // Get the original user message for context
+    const userMessages = state.messages.filter(
+      (m) => m._getType() === "human" || m.constructor.name === "HumanMessage"
+    );
+    const userMessage = userMessages.length > 0 
+      ? userMessages[userMessages.length - 1].content 
+      : "";
+    
+    if (isSimpleQuery) {
+      console.log(chalk.cyan(`   💬 Simple query - generating direct response`));
+      
+      // For simple queries, use a direct response prompt
+      const simplePrompt = `You are Apex, a friendly AI coding assistant.
+
+The user said: "${userMessage}"
+
+Respond naturally and conversationally. Be friendly and helpful.
+- For greetings: Respond with a warm greeting and offer to help
+- For "who are you": Briefly introduce yourself as Apex CLI agent
+- For thanks: Acknowledge warmly
+- Keep it concise but friendly`;
+      
+      const llm = createExecutorLLM([]);  // No tools needed
+      
+      const response = await llm.invoke([
+        new SystemMessage(simplePrompt),
+        new HumanMessage(userMessage),
+      ]);
+      
+      console.log(chalk.green(`   ✅ Direct response generated`));
+      
+      return {
+        messages: [response],
+        stepResults: {
+          [currentStep.id]: {
+            success: true,
+            output: response.content,
+            retries: 0,
+          },
+        },
+        iterations: state.iterations + 1,
+      };
+    }
+    
+    // ─────────────────────────────────────────────────────────────────────────
+    // STEP 3: PREPARE THE PROMPT (for complex tasks)
     // ─────────────────────────────────────────────────────────────────────────
     /**
      * We give the Executor context about:
@@ -130,11 +183,44 @@ export async function executorNode(state) {
      *   - What tools are available
      *   - Results from previous steps (for context)
      */
-    const previousResults = Object.entries(state.stepResults)
-      .map(([id, result]) => `Step ${id}: ${result.success ? "✓" : "✗"} ${result.output || result.error || ""}`.slice(0, 100))
-      .join("\n");
     
-    const contextPrompt = `${EXECUTOR_PROMPT}
+    // Provide more complete previous results for analysis steps
+    const previousResults = Object.entries(state.stepResults)
+      .map(([id, result]) => {
+        const status = result.success ? "✓ SUCCESS" : "✗ FAILED";
+        const output = result.output || result.error || "(no output)";
+        // Give more context - up to 1000 chars for each step
+        return `Step ${id} ${status}:\n${output.slice(0, 1000)}`;
+      })
+      .join("\n\n");
+    
+    // Check if this is an analysis/synthesis step (no tools needed)
+    const isAnalysisStep = currentStep.tools_needed?.length === 0 || 
+      /analyze|summarize|present|explain|synthesize|review/i.test(currentStep.description);
+    
+    let contextPrompt;
+    
+    if (isAnalysisStep && previousResults) {
+      // For analysis steps, emphasize using existing data
+      contextPrompt = `${EXECUTOR_PROMPT}
+
+## IMPORTANT: This is an ANALYSIS step
+You should analyze and synthesize the information from Previous Results below.
+DO NOT call any tools - just provide your analysis based on the data already collected.
+
+## Overall Goal:
+${state.plan?.goal || "Complete the user's request"}
+
+## Current Step to Execute:
+Step ${currentStep.id}: ${currentStep.description}
+
+## Previous Results (USE THIS DATA):
+${previousResults}
+
+Based on the Previous Results above, provide a clear and helpful response.`;
+    } else {
+      // For tool-using steps
+      contextPrompt = `${EXECUTOR_PROMPT}
 
 ## Available Tools:
 ${getToolDescriptions()}
@@ -149,11 +235,13 @@ Step ${currentStep.id}: ${currentStep.description}
 ${previousResults || "No previous steps"}
 
 Now complete this step using the appropriate tools.`;
+    }
     
     // ─────────────────────────────────────────────────────────────────────────
     // STEP 4: CALL THE LLM WITH TOOLS
     // ─────────────────────────────────────────────────────────────────────────
-    const llm = createExecutorLLM(allTools);
+    // For analysis steps, don't bind tools to prevent unnecessary tool calls
+    const llm = isAnalysisStep ? createExecutorLLM([]) : createExecutorLLM(allTools);
     
     const response = await llm.invoke([
       new SystemMessage(contextPrompt),
