@@ -1,34 +1,3 @@
-/**
- * ============================================================================
- * 📚 LANGGRAPH LEARNING PATH - FILE 11 OF 11 (FINAL!)
- * ============================================================================
- * 
- * 📖 WHAT IS THIS FILE?
- *    This is the CLI COMMAND file - it's the user interface that connects
- *    the user to the entire LangGraph agent system you've built!
- * 
- * 📝 PREREQUISITES: Read ALL previous files (1-10) first
- * 
- * 🎉 CONGRATULATIONS! This is the final file in the learning path!
- * 
- * ============================================================================
- * 
- * 🧠 HOW IT ALL COMES TOGETHER
- * 
- * When a user types: apex agent
- * 
- *   1. This CLI file starts
- *   2. It creates an AgentSession (session.js)
- *   3. AgentSession creates the graph (graph.js)
- *   4. Graph connects all nodes (planner, executor, reflector)
- *   5. User types a message
- *   6. session.chat() invokes the graph
- *   7. Graph runs through Plan → Execute → Reflect
- *   8. Response is shown to user
- *   9. Loop back to step 5!
- * 
- * ============================================================================
- */
 
 import { Command } from "commander";
 import readline from "readline";
@@ -39,17 +8,6 @@ import { requireAuth } from "./auth/login.js";
 import { allTools } from "../../lib/langgraph/tools.js";
 import { config } from "../../config/google.config.js";
 
-// ============================================================================
-// CLI UTILITIES
-// ============================================================================
-/**
- * These are helper functions for the CLI user experience.
- * They make the output look nice and professional!
- */
-
-/**
- * Create a spinner animation for loading states.
- */
 function createSpinner(text) {
   const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
   let i = 0;
@@ -79,32 +37,22 @@ function createSpinner(text) {
   };
 }
 
-/**
- * Display a section header.
- */
 function sectionHeader(title, width = 50) {
   console.log("\n" + chalk.cyan("─".repeat(width)));
   console.log(chalk.bold.cyan(`  ${title}`));
   console.log(chalk.cyan("─".repeat(width)));
 }
 
-/**
- * Display key-value pair.
- */
 function kvPair(key, value, indent = 0) {
   const padding = " ".repeat(indent);
   console.log(`${padding}${chalk.gray(key + ":")} ${chalk.white(value)}`);
 }
 
-/**
- * Format agent response with styling.
- */
 function formatAgentResponse(content) {
   if (!content) return chalk.gray("(No response)");
 
   let formatted = content;
 
-  // Style inline code
   formatted = formatted.replace(/`([^`]+)`/g, (_, code) => chalk.yellow(code));
 
   // Style bold
@@ -144,7 +92,7 @@ function handleError(error, verbose) {
 // ============================================================================
 /**
  * The main function that runs when user types: apex agent
- * 
+ *
  * This function:
  *   1. Parses command-line options
  *   2. Handles special commands (list, delete sessions)
@@ -414,9 +362,9 @@ export const agent = new Command("agent")
 // ============================================================================
 /**
  * You've completed the entire LangGraph learning path!
- * 
+ *
  * Here's what you've learned:
- * 
+ *
  *   1.  state.js      - How to define state with annotations
  *   2.  config.js     - How to configure the agent and prompts
  *   3.  llm.js        - How to set up LLMs with tools
@@ -428,12 +376,12 @@ export const agent = new Command("agent")
  *   9.  graph.js      - How to build and compile graphs
  *   10. session.js    - How to manage sessions and persistence
  *   11. agent.js      - How to create the CLI interface (THIS FILE!)
- * 
+ *
  * To use your agent:
  *   apex agent              # Full agent with planning
  *   apex agent --simple     # Simple chat mode
  *   apex agent --list       # List sessions
  *   apex agent -v           # Verbose mode
- * 
+ *
  * Happy coding! 🚀
  */

@@ -68,7 +68,7 @@ export default function DeviceApprovalContent() {
     <div className="flex min-h-screen items-center justify-center bg-background font-sans">
       <div className="w-full max-w-md px-4">
         <div className="space-y-8">
-          {/* Header Card */}
+          { }
           <div className="border-2 border-dashed border-zinc-700 rounded-2xl p-8 bg-zinc-900/50 backdrop-blur-sm text-center">
             <div className="flex justify-center mb-6">
               <div className="relative">
@@ -85,7 +85,7 @@ export default function DeviceApprovalContent() {
               <p className="text-sm text-zinc-400">A new device is requesting access to your account</p>
             </div>
           </div>
-          {/* Device Code Card */}
+          { }
           <div className="border-2 border-dashed border-zinc-700 rounded-2xl p-6 bg-zinc-900/50 backdrop-blur-sm space-y-4">
             <div className="space-y-2">
               <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Authorization Code</p>
@@ -97,7 +97,7 @@ export default function DeviceApprovalContent() {
               <p className="text-xs text-zinc-600 text-center">Share this code with the requesting device</p>
             </div>
           </div>
-          {/* Security Info Card */}
+          { }
           <div className="border-2 border-dashed border-zinc-700 rounded-2xl p-6 bg-zinc-900/50 backdrop-blur-sm">
             <div className="space-y-3">
               <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">
@@ -110,7 +110,7 @@ export default function DeviceApprovalContent() {
               </div>
             </div>
           </div>
-          {/* Action Buttons */}
+          { }
           <div className="space-y-3">
             <Button
               onClick={handleApprove}

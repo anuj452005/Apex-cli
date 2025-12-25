@@ -13,10 +13,10 @@ const Page = () => {
 
   useEffect(() => {
     if (!isPending && data?.session && data?.user) {
-      // Check for callback URL to redirect back to
+
       const callbackUrl = searchParams.get("callbackUrl")
       if (callbackUrl) {
-        // Decode and redirect to the callback URL
+
         router.push(decodeURIComponent(callbackUrl))
       } else {
         router.push("/")

@@ -20,30 +20,25 @@ const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const CONFIG_DIR = path.join(os.homedir(), ".better-auth");
 const TOKEN_FILE = path.join(CONFIG_DIR, "token.json");
 
-// ============================================
-// TOKEN MANAGEMENT (Export these for use in other commands)
-// ============================================
-
 export async function getStoredToken() {
   try {
     const data = await fs.readFile(TOKEN_FILE, "utf-8");
     const token = JSON.parse(data);
     return token;
   } catch (error) {
-    // File doesn't exist or can't be read
+
     return null;
   }
 }
 
 export async function storeToken(token) {
   try {
-    // Ensure config directory exists
+
     await fs.mkdir(CONFIG_DIR, { recursive: true });
 
-    // Store token with metadata
     const tokenData = {
       access_token: token.access_token,
-      refresh_token: token.refresh_token, // Store if available
+      refresh_token: token.refresh_token,
       token_type: token.token_type || "Bearer",
       scope: token.scope,
       expires_at: token.expires_in
@@ -65,7 +60,7 @@ export async function clearStoredToken() {
     await fs.unlink(TOKEN_FILE);
     return true;
   } catch (error) {
-    // File doesn't exist or can't be deleted
+
     return false;
   }
 }
@@ -79,7 +74,6 @@ export async function isTokenExpired() {
   const expiresAt = new Date(token.expires_at);
   const now = new Date();
 
-  // Consider expired if less than 5 minutes remaining
   return expiresAt.getTime() - now.getTime() < 5 * 60 * 1000;
 }
 
@@ -104,10 +98,6 @@ export async function requireAuth() {
   return token;
 }
 
-// ============================================
-// LOGIN COMMAND
-// ============================================
-
 export async function loginAction(opts) {
   const options = z
     .object({
@@ -129,7 +119,6 @@ export async function loginAction(opts) {
     process.exit(1);
   }
 
-  // Check if already logged in
   const existingToken = await getStoredToken();
   const expired = await isTokenExpired();
 
@@ -145,7 +134,6 @@ export async function loginAction(opts) {
     }
   }
 
-  // Create the auth client
   const authClient = createAuthClient({
     baseURL: serverUrl,
     plugins: [deviceAuthorizationClient()],
@@ -155,7 +143,7 @@ export async function loginAction(opts) {
   spinner.start();
 
   try {
-    // Request device code
+
     const { data, error } = await authClient.device.code({
       client_id: clientId,
       scope: "openid profile email",
@@ -191,7 +179,6 @@ export async function loginAction(opts) {
       expires_in,
     } = data;
 
-    // Display authorization instructions
     console.log("");
     console.log(chalk.cyan("📱 Device Authorization Required"));
     console.log("");
@@ -203,7 +190,6 @@ export async function loginAction(opts) {
     console.log(`Enter code: ${chalk.bold.green(user_code)}`);
     console.log("");
 
-    // Ask if user wants to open browser
     const shouldOpen = await confirm({
       message: "Open browser automatically?",
       initialValue: true,
@@ -214,7 +200,6 @@ export async function loginAction(opts) {
       await open(urlToOpen);
     }
 
-    // Start polling
     console.log(
       chalk.gray(
         `Waiting for authorization (expires in ${Math.floor(
@@ -231,7 +216,7 @@ export async function loginAction(opts) {
     );
 
     if (token) {
-      // Store the token
+
       const saved = await storeToken(token);
 
       if (!saved) {
@@ -243,7 +228,6 @@ export async function loginAction(opts) {
         );
       }
 
-      // Get user info
       const { data: session } = await authClient.getSession({
         fetchOptions: {
           headers: {
@@ -307,7 +291,7 @@ async function pollForToken(authClient, deviceCode, clientId, initialInterval) {
         } else if (error) {
           switch (error.error) {
             case "authorization_pending":
-              // Continue polling
+
               break;
             case "slow_down":
               pollingInterval += 5;
@@ -341,10 +325,6 @@ async function pollForToken(authClient, deviceCode, clientId, initialInterval) {
   });
 }
 
-// ============================================
-// LOGOUT COMMAND
-// ============================================
-
 export async function logoutAction() {
   intro(chalk.bold("👋 Logout"));
 
@@ -374,10 +354,6 @@ export async function logoutAction() {
   }
 }
 
-// ============================================
-// WHOAMI COMMAND
-// ============================================
-
 export async function whoamiAction(opts) {
   const token = await requireAuth();
   if (!token?.access_token) {
@@ -401,17 +377,12 @@ export async function whoamiAction(opts) {
     },
   });
 
-  // Output user session info
   console.log(
     chalk.bold.greenBright(`\n👤 User: ${user.name}
 📧 Email: ${user.email}
 👤 ID: ${user.id}`)
   );
 }
-
-// ============================================
-// COMMANDER SETUP
-// ============================================
 
 export const login = new Command("login")
   .description("Login to Better Auth")

@@ -14,7 +14,7 @@ import { config } from "./commands/config.js";
 dotenv.config();
 
 async function main(){
-      // Display banner
+
   console.log(
     chalk.cyan(
       figlet.textSync("Apex CLI", {
@@ -34,7 +34,6 @@ async function main(){
     .addCommand(agent)
     .addCommand(config)
 
-
   program.action((options)=>{
     program.help();
   })
@@ -44,7 +43,6 @@ async function main(){
 }
 
 main().catch((err)=>{
-    console.log(chalk.red("Error while running Apex cli",err)); 
+    console.log(chalk.red("Error while running Apex cli",err));
     process.exit();
 });
-

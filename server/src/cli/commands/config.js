@@ -1,14 +1,3 @@
-/**
- * Config Command
- *
- * Manage API keys and configuration for Apex CLI.
- * Stores configuration in ~/.apex-cli/config.json
- *
- * Usage:
- *   apex config set GOOGLE_API_KEY <your-api-key>
- *   apex config get GOOGLE_API_KEY
- *   apex config list
- */
 
 import { Command } from "commander";
 import chalk from "chalk";
@@ -17,26 +6,15 @@ import path from "path";
 import os from "os";
 import readline from "readline";
 
-// Config directory and file paths
 const CONFIG_DIR = path.join(os.homedir(), ".apex-cli");
 const CONFIG_FILE = path.join(CONFIG_DIR, "config.json");
 
-// ============================================================
-// CONFIG UTILITIES
-// ============================================================
-
-/**
- * Ensure config directory exists
- */
 function ensureConfigDir() {
   if (!fs.existsSync(CONFIG_DIR)) {
     fs.mkdirSync(CONFIG_DIR, { recursive: true });
   }
 }
 
-/**
- * Load config from file
- */
 export function loadConfig() {
   ensureConfigDir();
   try {
@@ -50,54 +28,34 @@ export function loadConfig() {
   return {};
 }
 
-/**
- * Save config to file
- */
 function saveConfig(config) {
   ensureConfigDir();
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
 }
 
-/**
- * Get a config value
- */
 export function getConfigValue(key) {
   const config = loadConfig();
   return config[key];
 }
 
-/**
- * Set a config value
- */
 export function setConfigValue(key, value) {
   const config = loadConfig();
   config[key] = value;
   saveConfig(config);
 }
 
-/**
- * Delete a config value
- */
 export function deleteConfigValue(key) {
   const config = loadConfig();
   delete config[key];
   saveConfig(config);
 }
 
-// ============================================================
-// CONFIG ACTIONS
-// ============================================================
-
-/**
- * Set action - set a configuration value
- */
 async function setAction(key, value) {
   if (!key) {
     console.log(chalk.red("❌ Please provide a key to set"));
     return;
   }
 
-  // If value is not provided, prompt for it (secure input for API keys)
   if (!value) {
     const rl = readline.createInterface({
       input: process.stdin,
@@ -122,9 +80,6 @@ async function setAction(key, value) {
   console.log(chalk.gray(`   Config saved to: ${CONFIG_FILE}`));
 }
 
-/**
- * Get action - get a configuration value
- */
 function getAction(key) {
   if (!key) {
     console.log(chalk.red("❌ Please provide a key to get"));
@@ -133,7 +88,7 @@ function getAction(key) {
 
   const value = getConfigValue(key);
   if (value) {
-    // Mask sensitive values
+
     const isSensitive = key.toLowerCase().includes("key") || key.toLowerCase().includes("secret");
     const displayValue = isSensitive ? value.slice(0, 8) + "..." + value.slice(-4) : value;
     console.log(chalk.cyan(`${key}: `) + chalk.white(displayValue));
@@ -142,9 +97,6 @@ function getAction(key) {
   }
 }
 
-/**
- * List action - list all configuration values
- */
 function listAction() {
   const config = loadConfig();
   const keys = Object.keys(config);
@@ -161,7 +113,7 @@ function listAction() {
 
   for (const key of keys) {
     const value = config[key];
-    // Mask sensitive values
+
     const isSensitive = key.toLowerCase().includes("key") || key.toLowerCase().includes("secret");
     const displayValue = isSensitive ? value.slice(0, 8) + "..." + value.slice(-4) : value;
     console.log(chalk.white(`  ${key}: `) + chalk.gray(displayValue));
@@ -171,9 +123,6 @@ function listAction() {
   console.log(chalk.gray(`Config file: ${CONFIG_FILE}\n`));
 }
 
-/**
- * Delete action - delete a configuration value
- */
 function deleteAction(key) {
   if (!key) {
     console.log(chalk.red("❌ Please provide a key to delete"));
@@ -188,10 +137,6 @@ function deleteAction(key) {
     console.log(chalk.yellow(`${key} was not set`));
   }
 }
-
-// ============================================================
-// COMMANDER SETUP
-// ============================================================
 
 export const config = new Command("config")
   .description("Manage API keys and configuration")

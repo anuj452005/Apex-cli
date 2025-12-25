@@ -15,17 +15,15 @@ export default function DeviceAuthorizationPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // Redirect to sign-in if not authenticated
   useEffect(() => {
     if (!isPending && !data?.session && !data?.user) {
-      // Store current URL to redirect back after login
+
       const currentUrl = window.location.href
       const callbackUrl = encodeURIComponent(currentUrl)
       router.push(`/sign-in?callbackUrl=${callbackUrl}`)
     }
   }, [data, isPending, router])
 
-  // Pre-fill user code from URL if present
   useEffect(() => {
     const codeFromUrl = searchParams.get("user_code")
     if (codeFromUrl) {
@@ -37,7 +35,6 @@ export default function DeviceAuthorizationPage() {
     }
   }, [searchParams])
 
-  // Show loading while checking auth
   if (isPending) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-background">
@@ -46,7 +43,6 @@ export default function DeviceAuthorizationPage() {
     )
   }
 
-  // Don't render if not authenticated (will redirect)
   if (!data?.session && !data?.user) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-background">
@@ -89,7 +85,7 @@ export default function DeviceAuthorizationPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
-        {/* Header Section */}
+        { }
         <div className="flex flex-col items-center gap-4 mb-8">
           <div className="p-3 rounded-lg border-2 border-dashed border-zinc-700">
             <ShieldAlert className="w-8 h-8 text-yellow-300" />
@@ -100,13 +96,13 @@ export default function DeviceAuthorizationPage() {
           </div>
         </div>
 
-        {/* Form Card */}
+        { }
         <form
           onSubmit={handleSubmit}
           className="border-2 border-dashed border-zinc-700 rounded-xl p-8 bg-zinc-950 backdrop-blur-sm"
         >
           <div className="space-y-6">
-            {/* Code Input */}
+            { }
             <div>
               <label htmlFor="code" className="block text-sm font-medium text-foreground mb-2">
                 Device Code
@@ -123,12 +119,12 @@ export default function DeviceAuthorizationPage() {
               <p className="text-xs text-muted-foreground mt-2">Find this code on the device you want to authorize</p>
             </div>
 
-            {/* Error Message */}
+            { }
             {error && (
               <div className="p-3 rounded-lg bg-red-950 border border-red-900 text-red-200 text-sm">{error}</div>
             )}
 
-            {/* Submit Button */}
+            { }
             <button
               type="submit"
               disabled={isLoading || userCode.length < 9}
@@ -137,7 +133,7 @@ export default function DeviceAuthorizationPage() {
               {isLoading ? "Verifying..." : "Continue"}
             </button>
 
-            {/* Info Box */}
+            { }
             <div className="p-4 bg-zinc-900 border-2 border-dashed border-zinc-700 rounded-lg">
               <p className="text-xs text-muted-foreground leading-relaxed">
                 This code is unique to your device and will expire shortly. Keep it confidential and never share it with

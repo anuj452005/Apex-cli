@@ -20,9 +20,6 @@ import { authClient } from "@/lib/auth-client";
 import { GithubIcon } from "lucide-react";
 import { useState } from "react";
 
-
-
-
 export function LoginForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -31,10 +28,9 @@ export function LoginForm() {
     const onSocialLogin = async (provider: "github" | "google") => {
         setIsLoading(true);
         try {
-            // Get callback URL from query params or use default
+
             const callbackUrl = searchParams.get("callbackUrl");
-            // If there's a callback URL, use it directly; otherwise use the sign-in page
-            // The sign-in page will then handle redirecting to the callback URL after auth
+
             const finalCallbackUrl = callbackUrl
                 ? `http://localhost:3000/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`
                 : process.env.NEXT_PUBLIC_AUTH_CALLBACK_URL || "http://localhost:3000";
@@ -52,7 +48,7 @@ export function LoginForm() {
 
     return (
         <div className="relative flex flex-col items-center justify-center min-h-[600px] w-full max-w-xl mx-auto p-4 animate-in fade-in duration-700">
-            {/* Background Decorative Glow */}
+            { }
             <div className="absolute -top-24 -left-24 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl" />
             <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-purple-500/20 rounded-full blur-3xl" />
 

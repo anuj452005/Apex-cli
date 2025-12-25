@@ -27,9 +27,9 @@ export default function Home() {
     <div className="flex min-h-screen items-center justify-center bg-background font-sans">
       <div className="w-full max-w-md px-4">
         <div className="space-y-8">
-          {/* Profile Header Card */}
+          { }
           <div className="border-2 border-dashed border-zinc-700 rounded-2xl p-8 bg-zinc-900/50 backdrop-blur-sm">
-            {/* Avatar */}
+            { }
             <div className="flex justify-center mb-6">
               <div className="relative">
                 <img
@@ -43,14 +43,14 @@ export default function Home() {
               </div>
             </div>
 
-            {/* User Info */}
+            { }
             <div className="space-y-3 text-center">
               <h1 className="text-3xl font-bold text-zinc-50 truncate">Welcome, {data?.user?.name || "User"}</h1>
               <p className="text-sm text-zinc-400">Authenticated User</p>
             </div>
           </div>
 
-          {/* User Details Card */}
+          { }
           <div className="border-2 border-dashed border-zinc-700 rounded-2xl p-6 bg-zinc-900/50 backdrop-blur-sm space-y-4">
             <div className="space-y-2">
               <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Email Address</p>
@@ -58,7 +58,7 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Sign Out Button */}
+          { }
           <Button
             onClick={() =>
               authClient.signOut({
@@ -73,7 +73,7 @@ export default function Home() {
             Sign Out
           </Button>
 
-          {/* Decorative divider */}
+          { }
           <div className="flex items-center gap-3">
             <div className="flex-1 h-px border-t border-dashed border-zinc-700"></div>
             <span className="text-xs text-zinc-600">Session Active</span>
