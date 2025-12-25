@@ -39,7 +39,7 @@ const llm = new ChatGoogleGenerativeAI({
   maxOutputTokens: 1024,
   
   // API key from environment variables
-  apiKey: process.env.GOOGLE_API_KEY,
+  apiKey: "AIzaSyAfW4RQd9Xu0gnuvINCOCrk-7YZBreoyBI",
 });
 
 // ============================================================

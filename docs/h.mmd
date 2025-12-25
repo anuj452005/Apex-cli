@@ -1,0 +1,26 @@
+flowchart TB
+    subgraph Authentication
+        A[apex login] --> B[Device Flow Auth]
+        B --> C[Better-Auth Server]
+        C --> D[Token Stored in ~/.better-auth/token.json]
+    end
+    
+    subgraph CLI Commands
+        E[apex chat] --> F[Basic LLM Chat]
+        G[apex agent] --> H[Full ReAct Agent]
+    end
+    
+    subgraph LangGraph Core
+        H --> I[State Management]
+        I --> J[LLM Node]
+        J --> K{Tool Calls?}
+        K -->|Safe| L[Execute Tool]
+        K -->|Dangerous| M[Human Approval]
+        M --> N[Execute if Approved]
+        L --> J
+        N --> J
+        K -->|No| O[Return Response]
+    end
+    
+    D --> E
+    D --> G

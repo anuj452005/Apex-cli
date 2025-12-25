@@ -1,25 +1,33 @@
 /**
- * Agent Command (Production-Grade)
- *
- * Full agent mode with tool calling and human-in-the-loop.
- * Uses the complete LangGraph agent with memory persistence.
- *
- * Features:
- * - Tool calling with safe/dangerous distinction
- * - Human-in-the-loop for dangerous operations
- * - Session persistence and management
- * - Verbose mode for debugging
- * - Progress visualization
- * - Graceful error handling
- *
- * Usage: apex agent [options]
- *
- * Options:
- *   -s, --session <id>   Resume a specific session
- *   -l, --list           List all saved sessions
- *   -d, --delete <id>    Delete a saved session
- *   -v, --verbose        Show detailed execution logs
- *   --no-tools           Run without tool access
+ * ============================================================================
+ * 📚 LANGGRAPH LEARNING PATH - FILE 11 OF 11 (FINAL!)
+ * ============================================================================
+ * 
+ * 📖 WHAT IS THIS FILE?
+ *    This is the CLI COMMAND file - it's the user interface that connects
+ *    the user to the entire LangGraph agent system you've built!
+ * 
+ * 📝 PREREQUISITES: Read ALL previous files (1-10) first
+ * 
+ * 🎉 CONGRATULATIONS! This is the final file in the learning path!
+ * 
+ * ============================================================================
+ * 
+ * 🧠 HOW IT ALL COMES TOGETHER
+ * 
+ * When a user types: apex agent
+ * 
+ *   1. This CLI file starts
+ *   2. It creates an AgentSession (session.js)
+ *   3. AgentSession creates the graph (graph.js)
+ *   4. Graph connects all nodes (planner, executor, reflector)
+ *   5. User types a message
+ *   6. session.chat() invokes the graph
+ *   7. Graph runs through Plan → Execute → Reflect
+ *   8. Response is shown to user
+ *   9. Loop back to step 5!
+ * 
+ * ============================================================================
  */
 
 import { Command } from "commander";
@@ -31,12 +39,16 @@ import { requireAuth } from "./auth/login.js";
 import { allTools } from "../../lib/langgraph/tools.js";
 import { config } from "../../config/google.config.js";
 
-// ============================================================
-// UTILITIES
-// ============================================================
+// ============================================================================
+// CLI UTILITIES
+// ============================================================================
+/**
+ * These are helper functions for the CLI user experience.
+ * They make the output look nice and professional!
+ */
 
 /**
- * Create a spinner animation
+ * Create a spinner animation for loading states.
  */
 function createSpinner(text) {
   const frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
@@ -68,17 +80,7 @@ function createSpinner(text) {
 }
 
 /**
- * Format tool info for display
- */
-function formatToolInfo(tool) {
-  const isDangerous = config.dangerousTools.includes(tool.name);
-  const icon = isDangerous ? "⚠️" : "🔧";
-  const color = isDangerous ? chalk.yellow : chalk.green;
-  return `${icon} ${color(tool.name)}`;
-}
-
-/**
- * Display a section header
+ * Display a section header.
  */
 function sectionHeader(title, width = 50) {
   console.log("\n" + chalk.cyan("─".repeat(width)));
@@ -87,24 +89,84 @@ function sectionHeader(title, width = 50) {
 }
 
 /**
- * Display key-value pair with consistent formatting
+ * Display key-value pair.
  */
 function kvPair(key, value, indent = 0) {
   const padding = " ".repeat(indent);
   console.log(`${padding}${chalk.gray(key + ":")} ${chalk.white(value)}`);
 }
 
-// ============================================================
-// AGENT ACTION
-// ============================================================
+/**
+ * Format agent response with styling.
+ */
+function formatAgentResponse(content) {
+  if (!content) return chalk.gray("(No response)");
 
+  let formatted = content;
+
+  // Style inline code
+  formatted = formatted.replace(/`([^`]+)`/g, (_, code) => chalk.yellow(code));
+
+  // Style bold
+  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, (_, text) => chalk.bold(text));
+
+  // Indent each line
+  return formatted
+    .split("\n")
+    .map((line) => "  " + line)
+    .join("\n");
+}
+
+/**
+ * Handle errors with helpful messages.
+ */
+function handleError(error, verbose) {
+  console.error(chalk.red(`\n❌ Error: ${error.message}`));
+
+  if (verbose) {
+    console.error(chalk.gray(`   Stack: ${error.stack?.split("\n")[1] || "N/A"}`));
+  }
+
+  // Provide helpful suggestions based on error type
+  if (error.message.includes("API") || error.message.includes("key")) {
+    console.log(chalk.gray("\n   💡 Fix: Run 'apex config set GOOGLE_API_KEY <your-key>'"));
+  } else if (error.message.includes("rate") || error.message.includes("429")) {
+    console.log(chalk.yellow("\n   💡 Rate limited. Wait a moment and try again."));
+  } else if (error.message.includes("network") || error.message.includes("ECONNREFUSED")) {
+    console.log(chalk.yellow("\n   💡 Network error. Check your internet connection."));
+  } else if (error.message.includes("timeout")) {
+    console.log(chalk.yellow("\n   💡 Request timed out. Try a simpler query."));
+  }
+}
+
+// ============================================================================
+// MAIN AGENT ACTION
+// ============================================================================
+/**
+ * The main function that runs when user types: apex agent
+ * 
+ * This function:
+ *   1. Parses command-line options
+ *   2. Handles special commands (list, delete sessions)
+ *   3. Starts the interactive agent loop
+ *   4. Processes user input and shows responses
+ */
 async function agentAction(options) {
-  // Require authentication
+  // ─────────────────────────────────────────────────────────────────────────
+  // REQUIRE AUTHENTICATION
+  // ─────────────────────────────────────────────────────────────────────────
+  /**
+   * Ensure the user is logged in before using the agent.
+   * This is optional but good for tracking usage.
+   */
   await requireAuth();
 
   const verbose = options.verbose || false;
+  const mode = options.simple ? "chat" : "agent";
 
-  // Handle list sessions
+  // ─────────────────────────────────────────────────────────────────────────
+  // HANDLE LIST SESSIONS
+  // ─────────────────────────────────────────────────────────────────────────
   if (options.list) {
     const sessions = await AgentSession.listSessions();
     if (sessions.length === 0) {
@@ -119,7 +181,9 @@ async function agentAction(options) {
     return;
   }
 
-  // Handle delete session
+  // ─────────────────────────────────────────────────────────────────────────
+  // HANDLE DELETE SESSION
+  // ─────────────────────────────────────────────────────────────────────────
   if (options.delete) {
     const deleted = await AgentSession.deleteSession(options.delete);
     if (deleted) {
@@ -130,8 +194,11 @@ async function agentAction(options) {
     return;
   }
 
-  // ==== Start Interactive Agent ====
-  sectionHeader("🤖 Apex Agent");
+  // ─────────────────────────────────────────────────────────────────────────
+  // START INTERACTIVE AGENT
+  // ─────────────────────────────────────────────────────────────────────────
+  const modeLabel = mode === "agent" ? "Full Agent (Plan→Execute→Reflect)" : "Simple Chat";
+  sectionHeader(`🤖 Apex Agent - ${modeLabel}`);
 
   console.log(chalk.gray("\nAn AI agent with tool access and human-in-the-loop.\n"));
 
@@ -156,10 +223,16 @@ async function agentAction(options) {
   console.log(chalk.gray("  • 'status' - Show session info"));
   console.log();
 
-  // Initialize session
+  // ─────────────────────────────────────────────────────────────────────────
+  // INITIALIZE SESSION
+  // ─────────────────────────────────────────────────────────────────────────
+  /**
+   * Create a new session or resume an existing one.
+   * The session handles all LangGraph complexity!
+   */
   let session;
   try {
-    session = new AgentSession(options.session);
+    session = new AgentSession(options.session, mode);
   } catch (error) {
     console.error(chalk.red(`\n❌ Failed to initialize session: ${error.message}\n`));
     return;
@@ -167,14 +240,16 @@ async function agentAction(options) {
 
   const sessionInfo = session.getSessionInfo();
   kvPair("Session", sessionInfo.sessionId);
+  kvPair("Mode", sessionInfo.mode);
   kvPair("Storage", sessionInfo.sessionsDir);
   if (verbose) {
-    kvPair("Mode", "verbose");
-    kvPair("Max iterations", config.maxIterations);
+    kvPair("Max iterations", config.maxIterations.toString());
   }
   console.log();
 
-  // Create readline interface
+  // ─────────────────────────────────────────────────────────────────────────
+  // CREATE READLINE INTERFACE
+  // ─────────────────────────────────────────────────────────────────────────
   const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -199,14 +274,22 @@ async function agentAction(options) {
     process.exit(0);
   });
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // MAIN QUESTION LOOP
+  // ─────────────────────────────────────────────────────────────────────────
   /**
-   * Main question loop
+   * This is the main interactive loop:
+   *   1. Show prompt
+   *   2. Get user input
+   *   3. Handle commands OR send to agent
+   *   4. Show response
+   *   5. Repeat
    */
   const askQuestion = () => {
     rl.question(chalk.green("\n👤 You: "), async (input) => {
       const trimmed = input.trim();
 
-      // Handle commands
+      // Handle built-in commands
       if (trimmed.toLowerCase() === "exit") {
         console.log(chalk.cyan("\n👋 Goodbye! Session saved.\n"));
         rl.close();
@@ -215,7 +298,7 @@ async function agentAction(options) {
 
       if (trimmed.toLowerCase() === "clear") {
         try {
-          session = new AgentSession();
+          session = new AgentSession(null, mode);
           console.log(chalk.yellow("\n🔄 Session cleared. Starting fresh."));
           console.log(chalk.gray(`   New session: ${session.getSessionInfo().sessionId}`));
         } catch (error) {
@@ -246,6 +329,7 @@ async function agentAction(options) {
         const info = session.getSessionInfo();
         console.log(chalk.cyan("\n📊 Session Status:"));
         kvPair("  Session ID", info.sessionId, 0);
+        kvPair("  Mode", info.mode, 0);
         kvPair("  Storage", info.sessionsDir, 0);
         kvPair("  Model", config.model, 0);
         kvPair("  Max iterations", config.maxIterations.toString(), 0);
@@ -258,7 +342,9 @@ async function agentAction(options) {
         return;
       }
 
-      // Process user message
+      // ─────────────────────────────────────────────────────────────────────
+      // PROCESS USER MESSAGE
+      // ─────────────────────────────────────────────────────────────────────
       isProcessing = true;
       shouldCancel = false;
 
@@ -283,6 +369,9 @@ async function agentAction(options) {
           if (result.iterations) {
             console.log(chalk.gray(`   📊 Iterations: ${result.iterations}`));
           }
+          if (result.plan) {
+            console.log(chalk.gray(`   📋 Plan: ${result.plan.steps?.length || 0} steps`));
+          }
           console.log(chalk.gray(`   ⏱️  Duration: ${duration}s`));
         }
 
@@ -300,60 +389,51 @@ async function agentAction(options) {
     });
   };
 
+  // Start the loop!
   askQuestion();
 }
 
-/**
- * Format agent response with styling
- */
-function formatAgentResponse(content) {
-  if (!content) return chalk.gray("(No response)");
-
-  let formatted = content;
-
-  // Style inline code
-  formatted = formatted.replace(/`([^`]+)`/g, (_, code) => chalk.yellow(code));
-
-  // Style bold
-  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, (_, text) => chalk.bold(text));
-
-  // Indent each line
-  return formatted
-    .split("\n")
-    .map((line) => "  " + line)
-    .join("\n");
-}
-
-/**
- * Handle errors with helpful messages
- */
-function handleError(error, verbose) {
-  console.error(chalk.red(`\n❌ Error: ${error.message}`));
-
-  if (verbose) {
-    console.error(chalk.gray(`   Stack: ${error.stack?.split("\n")[1] || "N/A"}`));
-  }
-
-  // Provide helpful suggestions based on error type
-  if (error.message.includes("API") || error.message.includes("key")) {
-    console.log(chalk.gray("\n   💡 Fix: Run 'apex config set GOOGLE_API_KEY <your-key>'"));
-  } else if (error.message.includes("rate") || error.message.includes("429")) {
-    console.log(chalk.yellow("\n   💡 Rate limited. Wait a moment and try again."));
-  } else if (error.message.includes("network") || error.message.includes("ECONNREFUSED")) {
-    console.log(chalk.yellow("\n   💡 Network error. Check your internet connection."));
-  } else if (error.message.includes("timeout")) {
-    console.log(chalk.yellow("\n   💡 Request timed out. Try a simpler query."));
-  }
-}
-
-// ============================================================
+// ============================================================================
 // COMMANDER SETUP
-// ============================================================
-
+// ============================================================================
+/**
+ * Commander.js is used to define CLI commands and options.
+ * This exports the 'agent' command that gets added to the main CLI.
+ */
 export const agent = new Command("agent")
   .description("Full AI agent with tools, memory, and human-in-the-loop")
   .option("-s, --session <id>", "Resume a specific session")
   .option("-l, --list", "List all saved sessions")
   .option("-d, --delete <id>", "Delete a saved session")
   .option("-v, --verbose", "Show detailed execution logs")
+  .option("--simple", "Use simple chat mode instead of full agent")
   .action(agentAction);
+
+// ============================================================================
+// 🎉 CONGRATULATIONS!
+// ============================================================================
+/**
+ * You've completed the entire LangGraph learning path!
+ * 
+ * Here's what you've learned:
+ * 
+ *   1.  state.js      - How to define state with annotations
+ *   2.  config.js     - How to configure the agent and prompts
+ *   3.  llm.js        - How to set up LLMs with tools
+ *   4.  tools.js      - How to define tools the agent can use
+ *   5.  planner.js    - How the Planner breaks tasks into steps
+ *   6.  executor.js   - How the Executor runs each step
+ *   7.  reflector.js  - How the Reflector evaluates and decides
+ *   8.  nodes.js      - How all nodes work together
+ *   9.  graph.js      - How to build and compile graphs
+ *   10. session.js    - How to manage sessions and persistence
+ *   11. agent.js      - How to create the CLI interface (THIS FILE!)
+ * 
+ * To use your agent:
+ *   apex agent              # Full agent with planning
+ *   apex agent --simple     # Simple chat mode
+ *   apex agent --list       # List sessions
+ *   apex agent -v           # Verbose mode
+ * 
+ * Happy coding! 🚀
+ */

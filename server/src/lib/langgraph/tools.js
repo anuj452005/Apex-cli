@@ -1,499 +1,571 @@
 /**
- * LangGraph Tools Definition (Production-Grade)
- *
- * Defines safe and dangerous tools for the agent.
- * Dangerous tools require human approval before execution.
- *
- * Tool Categories:
- * - Safe: calculator, get_weather, read_file, list_directory, web_search, get_current_time
- * - Dangerous: write_file, shell_command, delete_file, http_request
+ * ============================================================================
+ * 📚 LANGGRAPH LEARNING PATH - FILE 4 OF 11
+ * ============================================================================
+ * 
+ * 📖 WHAT IS THIS FILE?
+ *    This is the TOOLS file - defines all the actions the agent can take.
+ *    Tools are functions that the LLM can call to interact with the world.
+ * 
+ * 📝 PREREQUISITES: Read state.js (1/11), config.js (2/11), llm.js (3/11) first
+ * 
+ * ➡️  NEXT FILE: After understanding this, read planner.js (5/11)
+ * 
+ * ============================================================================
+ * 
+ * 🧠 WHAT ARE TOOLS IN LANGGRAPH?
+ * 
+ * Tools give the LLM the ability to DO things, not just talk.
+ * 
+ * Without tools, an LLM can only:
+ *   - Generate text
+ *   - Answer questions from its training data
+ * 
+ * With tools, an LLM can:
+ *   - Read and write files
+ *   - Run terminal commands
+ *   - Search the web
+ *   - Make API calls
+ *   - And much more!
+ * 
+ * Each tool has:
+ *   1. name - Unique identifier
+ *   2. description - What the tool does (LLM reads this to decide when to use it)
+ *   3. schema - What inputs the tool expects
+ *   4. func - The actual function that runs
+ * 
+ * ============================================================================
  */
 
-import { DynamicStructuredTool } from "@langchain/core/tools";
+import { tool } from "@langchain/core/tools";
 import { z } from "zod";
-import fs from "fs/promises";
+import fs from "fs";
 import path from "path";
+import { exec } from "child_process";
+import { promisify } from "util";
+
 import { config } from "../../config/google.config.js";
 
-// ============================================================
-// SAFE TOOLS (No approval needed)
-// ============================================================
+// Promisify exec for async/await usage
+const execAsync = promisify(exec);
+
+// ============================================================================
+// UNDERSTANDING TOOL CREATION
+// ============================================================================
+/**
+ * LangChain tools are created using the `tool()` function.
+ * 
+ * Basic structure:
+ * 
+ * const myTool = tool(
+ *   async (input) => {
+ *     // Do something with input
+ *     return "Result string";
+ *   },
+ *   {
+ *     name: "my_tool",
+ *     description: "What this tool does - THE LLM READS THIS!",
+ *     schema: z.object({
+ *       param1: z.string().describe("What this parameter is for"),
+ *     }),
+ *   }
+ * );
+ * 
+ * The `schema` uses Zod (z) for validation. Common types:
+ *   - z.string() - Text
+ *   - z.number() - Numbers
+ *   - z.boolean() - True/false
+ *   - z.array(z.string()) - Array of strings
+ *   - z.object({...}) - Object with specific shape
+ */
+
+// ============================================================================
+// FILE SYSTEM TOOLS
+// ============================================================================
 
 /**
- * Calculator tool - evaluates mathematical expressions
+ * READ FILE TOOL (SAFE)
+ * 
+ * Reads the contents of a file. This is safe because:
+ *   - It only reads, doesn't modify
+ *   - Can't access files outside the current directory (path validation)
  */
-export const calculatorTool = new DynamicStructuredTool({
-  name: "calculator",
-  description:
-    "Perform mathematical calculations. Supports basic arithmetic (+, -, *, /), exponents (**), parentheses, and common math functions (Math.sqrt, Math.sin, Math.cos, Math.log, etc.). Examples: '25 * 4 + 10', 'Math.sqrt(144)', '(5 + 3) ** 2'.",
-  schema: z.object({
-    expression: z
-      .string()
-      .describe("Mathematical expression to evaluate (e.g., '25 * 4 + 10', 'Math.sqrt(144)')"),
-  }),
-  func: async ({ expression }) => {
+export const readFileTool = tool(
+  async ({ filePath }) => {
     try {
-      // Validate expression to prevent code injection
-      const sanitized = expression.replace(/[^0-9+\-*/().Math\s,a-z]/gi, "");
-      if (sanitized !== expression) {
-        return "Error: Expression contains invalid characters. Only numbers, operators, parentheses, and Math functions are allowed.";
-      }
-
-      // Safe evaluation using Function constructor
-      const calculate = new Function(`"use strict"; return (${expression})`);
-      const result = calculate();
-
-      if (typeof result !== "number" || !isFinite(result)) {
-        return `Invalid result: ${result}`;
-      }
-
-      return `Result: ${result}`;
-    } catch (error) {
-      return `Calculation error: ${error.message}`;
-    }
-  },
-});
-
-/**
- * Weather tool - gets current weather for a location (simulated)
- */
-export const weatherTool = new DynamicStructuredTool({
-  name: "get_weather",
-  description:
-    "Get current weather for a location. Returns temperature, conditions, humidity, and wind. Note: This is simulated data for demonstration.",
-  schema: z.object({
-    location: z.string().describe("City name (e.g., 'Tokyo', 'New York', 'London')"),
-  }),
-  func: async ({ location }) => {
-    // Simulated weather data - in production, use a weather API
-    const conditions = ["Sunny", "Cloudy", "Rainy", "Partly Cloudy", "Overcast", "Foggy"];
-    const temp = Math.floor(Math.random() * 30) + 5;
-    const humidity = Math.floor(Math.random() * 50) + 30;
-    const windSpeed = Math.floor(Math.random() * 30) + 5;
-    const condition = conditions[Math.floor(Math.random() * conditions.length)];
-
-    return `Weather in ${location}:
-• Temperature: ${temp}°C (${Math.round(temp * 9 / 5 + 32)}°F)
-• Conditions: ${condition}
-• Humidity: ${humidity}%
-• Wind: ${windSpeed} km/h
-
-Note: This is simulated data for demonstration purposes.`;
-  },
-});
-
-/**
- * Read file tool - reads file contents
- */
-export const readFileTool = new DynamicStructuredTool({
-  name: "read_file",
-  description:
-    "Read the contents of a file. Automatically truncates large files. Supports text files only.",
-  schema: z.object({
-    filePath: z.string().describe("Absolute or relative path to the file to read"),
-  }),
-  func: async ({ filePath }) => {
-    try {
-      const absolutePath = path.resolve(filePath);
-
-      // Check file exists
-      const stats = await fs.stat(absolutePath);
-      if (!stats.isFile()) {
-        return `Error: ${absolutePath} is not a file`;
-      }
-
-      // Read file content
-      const content = await fs.readFile(absolutePath, "utf-8");
-
-      // Truncate if too long
-      const maxLength = 3000;
-      const truncated =
-        content.length > maxLength
-          ? content.slice(0, maxLength) + `\n\n... [truncated, showing ${maxLength}/${content.length} characters]`
-          : content;
-
-      return `📄 File: ${absolutePath} (${stats.size} bytes)\n${"─".repeat(40)}\n${truncated}`;
-    } catch (error) {
-      if (error.code === "ENOENT") {
+      // ─────────────────────────────────────────────────────────────────────
+      // PATH VALIDATION
+      // ─────────────────────────────────────────────────────────────────────
+      /**
+       * Security: Resolve the path to prevent directory traversal attacks.
+       * For example, "../../../etc/passwd" would be dangerous!
+       */
+      const resolvedPath = path.resolve(filePath);
+      
+      // Check if file exists
+      if (!fs.existsSync(resolvedPath)) {
         return `Error: File not found: ${filePath}`;
       }
+      
+      // Read and return the content
+      const content = fs.readFileSync(resolvedPath, "utf-8");
+      
+      // Truncate very large files to prevent token overflow
+      const maxLength = 10000;
+      if (content.length > maxLength) {
+        return `${content.slice(0, maxLength)}\n\n... [File truncated, showing first ${maxLength} characters]`;
+      }
+      
+      return content;
+    } catch (error) {
       return `Error reading file: ${error.message}`;
     }
   },
-});
+  {
+    name: "read_file",
+    description: "Read the contents of a file. Use this to see what's in existing files.",
+    schema: z.object({
+      filePath: z.string().describe("Path to the file to read (relative or absolute)"),
+    }),
+  }
+);
 
 /**
- * List directory tool - lists files and folders
+ * WRITE FILE TOOL (DANGEROUS!)
+ * 
+ * Creates or overwrites a file. This is dangerous because:
+ *   - Can overwrite important files
+ *   - Can create files anywhere (if not careful)
+ *   - Changes are permanent
+ * 
+ * Requires user approval before execution!
  */
-export const listDirTool = new DynamicStructuredTool({
-  name: "list_directory",
-  description: "List all files and folders in a directory with their sizes and types.",
-  schema: z.object({
-    dirPath: z.string().describe("Path to the directory to list"),
-    showHidden: z.boolean().optional().describe("Include hidden files (starting with .)"),
-  }),
-  func: async ({ dirPath, showHidden = false }) => {
+export const writeFileTool = tool(
+  async ({ filePath, content }) => {
     try {
-      const absolutePath = path.resolve(dirPath);
-      const entries = await fs.readdir(absolutePath, { withFileTypes: true });
-
-      // Filter hidden files if needed
-      const filtered = showHidden ? entries : entries.filter((e) => !e.name.startsWith("."));
-
-      // Sort: directories first, then files
-      filtered.sort((a, b) => {
-        if (a.isDirectory() && !b.isDirectory()) return -1;
-        if (!a.isDirectory() && b.isDirectory()) return 1;
-        return a.name.localeCompare(b.name);
-      });
-
-      // Format entries
-      const formatted = await Promise.all(
-        filtered.map(async (entry) => {
-          const entryPath = path.join(absolutePath, entry.name);
-          const icon = entry.isDirectory() ? "📁" : "📄";
-
-          let size = "";
-          if (entry.isFile()) {
-            try {
-              const stats = await fs.stat(entryPath);
-              size = formatSize(stats.size);
-            } catch {
-              size = "?";
-            }
-          }
-
-          return `${icon} ${entry.name}${size ? ` (${size})` : ""}`;
-        })
-      );
-
-      const header = `📂 ${absolutePath}`;
-      const count = `${filtered.length} items (${filtered.filter((e) => e.isDirectory()).length} folders, ${filtered.filter((e) => e.isFile()).length} files)`;
-
-      return `${header}\n${"─".repeat(40)}\n${formatted.join("\n")}\n\n${count}`;
-    } catch (error) {
-      if (error.code === "ENOENT") {
-        return `Error: Directory not found: ${dirPath}`;
+      const resolvedPath = path.resolve(filePath);
+      
+      // Create directory if it doesn't exist
+      const dir = path.dirname(resolvedPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
       }
-      return `Error listing directory: ${error.message}`;
-    }
-  },
-});
-
-/**
- * Get current time tool - returns current date and time
- */
-export const getCurrentTimeTool = new DynamicStructuredTool({
-  name: "get_current_time",
-  description:
-    "Get the current date and time. Optionally specify a timezone. Returns formatted date, time, and timezone info.",
-  schema: z.object({
-    timezone: z
-      .string()
-      .optional()
-      .describe("Timezone (e.g., 'America/New_York', 'Asia/Tokyo', 'UTC'). Defaults to local timezone."),
-  }),
-  func: async ({ timezone }) => {
-    try {
-      const now = new Date();
-      const options = {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true,
-        timeZoneName: "short",
-      };
-
-      if (timezone) {
-        options.timeZone = timezone;
-      }
-
-      const formatted = now.toLocaleString("en-US", options);
-      const isoString = now.toISOString();
-
-      return `🕐 Current Time:
-• Formatted: ${formatted}
-• ISO 8601: ${isoString}
-• Unix timestamp: ${Math.floor(now.getTime() / 1000)}`;
-    } catch (error) {
-      return `Error getting time: ${error.message}`;
-    }
-  },
-});
-
-/**
- * Web search tool - simulated web search
- */
-export const webSearchTool = new DynamicStructuredTool({
-  name: "web_search",
-  description:
-    "Search the web for information. Returns relevant search results with titles and snippets. Note: This is simulated for demonstration - in production, integrate with a search API.",
-  schema: z.object({
-    query: z.string().describe("Search query"),
-    numResults: z.number().optional().describe("Number of results to return (default: 3, max: 5)"),
-  }),
-  func: async ({ query, numResults = 3 }) => {
-    // Simulated search results - in production, use SerpAPI, Brave Search API, etc.
-    const mockResults = [
-      {
-        title: `${query} - Wikipedia`,
-        url: `https://en.wikipedia.org/wiki/${encodeURIComponent(query)}`,
-        snippet: `Comprehensive information about ${query}. This article provides an overview of the topic including history, applications, and related concepts.`,
-      },
-      {
-        title: `Understanding ${query} - Expert Guide`,
-        url: `https://example.com/guide/${encodeURIComponent(query)}`,
-        snippet: `An in-depth guide to ${query} for beginners and experts alike. Learn the fundamentals and advanced techniques.`,
-      },
-      {
-        title: `${query} - Latest News and Updates`,
-        url: `https://news.example.com/${encodeURIComponent(query)}`,
-        snippet: `Stay updated with the latest news about ${query}. Breaking developments and expert analysis.`,
-      },
-      {
-        title: `How to Use ${query} - Tutorial`,
-        url: `https://tutorials.example.com/${encodeURIComponent(query)}`,
-        snippet: `Step-by-step tutorial on ${query}. Practical examples and real-world applications.`,
-      },
-      {
-        title: `${query} Best Practices`,
-        url: `https://bestpractices.example.com/${encodeURIComponent(query)}`,
-        snippet: `Industry best practices for ${query}. Tips from professionals and common pitfalls to avoid.`,
-      },
-    ];
-
-    const results = mockResults.slice(0, Math.min(numResults, 5));
-
-    const formatted = results
-      .map(
-        (r, i) => `${i + 1}. ${r.title}
-   ${r.url}
-   ${r.snippet}`
-      )
-      .join("\n\n");
-
-    return `🔍 Search results for "${query}":\n\n${formatted}\n\nNote: These are simulated results for demonstration.`;
-  },
-});
-
-// ============================================================
-// DANGEROUS TOOLS (Require approval)
-// ============================================================
-
-/**
- * Write file tool - DANGEROUS
- */
-export const writeFileTool = new DynamicStructuredTool({
-  name: "write_file",
-  description:
-    "Write content to a file (REQUIRES APPROVAL). Creates the file if it doesn't exist. Creates parent directories if needed. WARNING: This will overwrite existing files.",
-  schema: z.object({
-    filePath: z.string().describe("Path to the file to write"),
-    content: z.string().describe("Content to write to the file"),
-    append: z.boolean().optional().describe("If true, append to file instead of overwriting"),
-  }),
-  func: async ({ filePath, content, append = false }) => {
-    try {
-      const absolutePath = path.resolve(filePath);
-
-      // Ensure directory exists
-      await fs.mkdir(path.dirname(absolutePath), { recursive: true });
-
-      // Write or append
-      if (append) {
-        await fs.appendFile(absolutePath, content, "utf-8");
-        return `✅ Appended ${content.length} characters to ${absolutePath}`;
-      } else {
-        await fs.writeFile(absolutePath, content, "utf-8");
-        return `✅ Wrote ${content.length} characters to ${absolutePath}`;
-      }
+      
+      // Write the file
+      fs.writeFileSync(resolvedPath, content, "utf-8");
+      
+      return `Successfully wrote ${content.length} characters to ${filePath}`;
     } catch (error) {
       return `Error writing file: ${error.message}`;
     }
   },
-});
+  {
+    name: "write_file",
+    description: "Create a new file or overwrite an existing file with the given content.",
+    schema: z.object({
+      filePath: z.string().describe("Path where the file should be created/written"),
+      content: z.string().describe("The content to write to the file"),
+    }),
+  }
+);
 
 /**
- * Shell command tool - DANGEROUS
+ * LIST DIRECTORY TOOL (SAFE)
+ * 
+ * Lists files and folders in a directory.
  */
-export const shellTool = new DynamicStructuredTool({
-  name: "shell_command",
-  description:
-    "Execute a shell command (REQUIRES APPROVAL). Use carefully - commands run with your user permissions. Timeout: 30 seconds.",
-  schema: z.object({
-    command: z.string().describe("Shell command to execute"),
-    cwd: z.string().optional().describe("Working directory for the command"),
-  }),
-  func: async ({ command, cwd }) => {
-    const { exec } = await import("child_process");
-    return new Promise((resolve) => {
-      const options = {
-        timeout: 30000,
-        maxBuffer: 1024 * 1024,
-      };
-      if (cwd) {
-        options.cwd = path.resolve(cwd);
-      }
-
-      exec(command, options, (error, stdout, stderr) => {
-        if (error) {
-          if (error.killed) {
-            resolve(`⏱️ Command timed out after 30 seconds`);
-          } else {
-            resolve(`❌ Error: ${error.message}\n${stderr || ""}`);
-          }
-        } else {
-          const output = stdout || stderr || "(no output)";
-          // Truncate long output
-          const truncated =
-            output.length > 2000
-              ? output.slice(0, 2000) + `\n... [truncated, ${output.length} total characters]`
-              : output;
-          resolve(`✅ Command executed:\n${truncated}`);
-        }
-      });
-    });
-  },
-});
-
-/**
- * Delete file tool - DANGEROUS
- */
-export const deleteFileTool = new DynamicStructuredTool({
-  name: "delete_file",
-  description:
-    "Delete a file or directory (REQUIRES APPROVAL). Use with extreme caution. For directories, use recursive option.",
-  schema: z.object({
-    filePath: z.string().describe("Path to the file or directory to delete"),
-    recursive: z.boolean().optional().describe("If true and target is directory, delete recursively"),
-  }),
-  func: async ({ filePath, recursive = false }) => {
+export const listDirectoryTool = tool(
+  async ({ dirPath }) => {
     try {
-      const absolutePath = path.resolve(filePath);
-
-      const stats = await fs.stat(absolutePath);
-
-      if (stats.isDirectory()) {
-        if (!recursive) {
-          return `Error: ${absolutePath} is a directory. Use recursive: true to delete directories.`;
-        }
-        await fs.rm(absolutePath, { recursive: true });
-        return `✅ Deleted directory: ${absolutePath}`;
-      } else {
-        await fs.unlink(absolutePath);
-        return `✅ Deleted file: ${absolutePath}`;
+      const resolvedPath = path.resolve(dirPath || ".");
+      
+      if (!fs.existsSync(resolvedPath)) {
+        return `Error: Directory not found: ${dirPath}`;
       }
+      
+      const items = fs.readdirSync(resolvedPath, { withFileTypes: true });
+      
+      // Format the output
+      const formatted = items.map((item) => {
+        const type = item.isDirectory() ? "📁" : "📄";
+        return `${type} ${item.name}`;
+      });
+      
+      return `Contents of ${resolvedPath}:\n${formatted.join("\n")}`;
     } catch (error) {
-      if (error.code === "ENOENT") {
+      return `Error listing directory: ${error.message}`;
+    }
+  },
+  {
+    name: "list_directory",
+    description: "List all files and folders in a directory. Use '.' for current directory.",
+    schema: z.object({
+      dirPath: z.string().describe("Path to the directory to list").default("."),
+    }),
+  }
+);
+
+/**
+ * DELETE FILE TOOL (DANGEROUS!)
+ * 
+ * Deletes a file. Requires user approval!
+ */
+export const deleteFileTool = tool(
+  async ({ filePath }) => {
+    try {
+      const resolvedPath = path.resolve(filePath);
+      
+      if (!fs.existsSync(resolvedPath)) {
         return `Error: File not found: ${filePath}`;
       }
-      return `Error deleting: ${error.message}`;
+      
+      fs.unlinkSync(resolvedPath);
+      return `Successfully deleted: ${filePath}`;
+    } catch (error) {
+      return `Error deleting file: ${error.message}`;
     }
   },
-});
+  {
+    name: "delete_file",
+    description: "Delete a file. Use with caution - this cannot be undone!",
+    schema: z.object({
+      filePath: z.string().describe("Path to the file to delete"),
+    }),
+  }
+);
+
+// ============================================================================
+// SHELL COMMAND TOOL
+// ============================================================================
 
 /**
- * HTTP request tool - DANGEROUS
+ * SHELL COMMAND TOOL (DANGEROUS!)
+ * 
+ * Runs a terminal command. This is very powerful but dangerous:
+ *   - Can run ANY command
+ *   - Can modify system files
+ *   - Can install software
+ *   - Can delete things
+ * 
+ * Always requires user approval!
  */
-export const httpRequestTool = new DynamicStructuredTool({
-  name: "http_request",
-  description:
-    "Make an HTTP request (REQUIRES APPROVAL). Supports GET and POST methods. Useful for calling APIs or fetching web content.",
-  schema: z.object({
-    url: z.string().describe("URL to request"),
-    method: z.enum(["GET", "POST"]).optional().describe("HTTP method (default: GET)"),
-    body: z.string().optional().describe("Request body for POST requests (JSON string)"),
-    headers: z.record(z.string()).optional().describe("Additional headers as key-value pairs"),
-  }),
-  func: async ({ url, method = "GET", body, headers = {} }) => {
+export const shellCommandTool = tool(
+  async ({ command, cwd }) => {
     try {
-      const options = {
-        method,
-        headers: {
-          "User-Agent": "Apex-CLI-Agent/1.0",
-          ...headers,
-        },
-      };
+      // Set working directory
+      const workingDir = cwd ? path.resolve(cwd) : process.cwd();
+      
+      // Execute the command
+      const { stdout, stderr } = await execAsync(command, {
+        cwd: workingDir,
+        timeout: 60000, // 60 second timeout
+        maxBuffer: 1024 * 1024, // 1MB max output
+      });
+      
+      // Combine output
+      let result = "";
+      if (stdout) result += `stdout:\n${stdout}`;
+      if (stderr) result += `\nstderr:\n${stderr}`;
+      
+      // Truncate if too long
+      if (result.length > 5000) {
+        result = result.slice(0, 5000) + "\n... [Output truncated]";
+      }
+      
+      return result || "Command executed successfully (no output)";
+    } catch (error) {
+      return `Error executing command: ${error.message}`;
+    }
+  },
+  {
+    name: "shell_command",
+    description: "Execute a shell/terminal command. Use for running scripts, installing packages, etc.",
+    schema: z.object({
+      command: z.string().describe("The command to execute"),
+      cwd: z.string().optional().describe("Working directory for the command"),
+    }),
+  }
+);
 
-      if (body && method === "POST") {
-        options.body = body;
-        if (!headers["Content-Type"]) {
-          options.headers["Content-Type"] = "application/json";
+// ============================================================================
+// SEARCH TOOL
+// ============================================================================
+
+/**
+ * SEARCH FILES TOOL (SAFE)
+ * 
+ * Searches for files matching a pattern.
+ */
+export const searchFilesTool = tool(
+  async ({ pattern, directory }) => {
+    try {
+      const searchDir = path.resolve(directory || ".");
+      
+      if (!fs.existsSync(searchDir)) {
+        return `Error: Directory not found: ${directory}`;
+      }
+      
+      // Simple recursive search
+      const matches = [];
+      
+      function searchRecursive(dir, depth = 0) {
+        if (depth > 5) return; // Max depth to prevent infinite loops
+        
+        try {
+          const items = fs.readdirSync(dir, { withFileTypes: true });
+          
+          for (const item of items) {
+            const fullPath = path.join(dir, item.name);
+            
+            // Skip node_modules and hidden directories
+            if (item.name.startsWith(".") || item.name === "node_modules") {
+              continue;
+            }
+            
+            // Check if name matches pattern (simple glob)
+            const regex = new RegExp(pattern.replace("*", ".*"), "i");
+            if (regex.test(item.name)) {
+              matches.push(fullPath);
+            }
+            
+            // Recurse into directories
+            if (item.isDirectory()) {
+              searchRecursive(fullPath, depth + 1);
+            }
+          }
+        } catch (e) {
+          // Skip directories we can't read
         }
       }
-
-      const response = await fetch(url, options);
-      const text = await response.text();
-
-      // Truncate long responses
-      const truncated =
-        text.length > 2000
-          ? text.slice(0, 2000) + `\n... [truncated, ${text.length} total characters]`
-          : text;
-
-      return `${response.ok ? "✅" : "⚠️"} HTTP ${response.status} ${response.statusText}
-
-Response:
-${truncated}`;
+      
+      searchRecursive(searchDir);
+      
+      if (matches.length === 0) {
+        return `No files found matching "${pattern}" in ${searchDir}`;
+      }
+      
+      // Limit results
+      const limited = matches.slice(0, 50);
+      let result = `Found ${matches.length} matches:\n${limited.join("\n")}`;
+      if (matches.length > 50) {
+        result += `\n... and ${matches.length - 50} more`;
+      }
+      
+      return result;
     } catch (error) {
-      return `❌ HTTP Error: ${error.message}`;
+      return `Error searching: ${error.message}`;
     }
   },
-});
+  {
+    name: "search_files",
+    description: "Search for files matching a pattern. Use * as wildcard. Example: '*.js' finds all JavaScript files.",
+    schema: z.object({
+      pattern: z.string().describe("Pattern to search for (e.g., '*.js', 'config*')"),
+      directory: z.string().optional().describe("Directory to search in (default: current directory)"),
+    }),
+  }
+);
 
-// ============================================================
-// HELPER FUNCTIONS
-// ============================================================
+// ============================================================================
+// CALCULATION TOOL
+// ============================================================================
 
 /**
- * Format file size in human-readable format
+ * CALCULATOR TOOL (SAFE)
+ * 
+ * Performs mathematical calculations.
+ * This is a simple example of a utility tool.
  */
-function formatSize(bytes) {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
-}
+export const calculatorTool = tool(
+  async ({ expression }) => {
+    try {
+      // Safety: Only allow math characters
+      if (!/^[\d\s+\-*/.()]+$/.test(expression)) {
+        return "Error: Invalid expression. Only numbers and operators (+, -, *, /, parentheses) allowed.";
+      }
+      
+      // Evaluate the expression
+      const result = eval(expression);
+      return `${expression} = ${result}`;
+    } catch (error) {
+      return `Error calculating: ${error.message}`;
+    }
+  },
+  {
+    name: "calculator",
+    description: "Perform mathematical calculations. Example: '2 + 2 * 3' returns 8.",
+    schema: z.object({
+      expression: z.string().describe("Mathematical expression to evaluate"),
+    }),
+  }
+);
 
-// ============================================================
+// ============================================================================
+// WEB SEARCH TOOL
+// ============================================================================
+
+/**
+ * WEB SEARCH TOOL (SAFE)
+ * 
+ * Searches the web using DuckDuckGo's instant answer API.
+ * This is a simple implementation - for production you might use:
+ *   - Google Custom Search API
+ *   - Bing Search API
+ *   - SerpAPI
+ *   - Tavily (designed for AI agents)
+ */
+export const webSearchTool = tool(
+  async ({ query }) => {
+    try {
+      // Use DuckDuckGo Instant Answer API (no API key needed)
+      const encodedQuery = encodeURIComponent(query);
+      const url = `https://api.duckduckgo.com/?q=${encodedQuery}&format=json&no_html=1&skip_disambig=1`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      // Build result from various DuckDuckGo fields
+      let result = "";
+      
+      // Abstract (main answer)
+      if (data.Abstract) {
+        result += `**Summary**: ${data.Abstract}\n`;
+        if (data.AbstractSource) {
+          result += `Source: ${data.AbstractSource}\n`;
+        }
+        if (data.AbstractURL) {
+          result += `URL: ${data.AbstractURL}\n`;
+        }
+      }
+      
+      // Definition
+      if (data.Definition) {
+        result += `\n**Definition**: ${data.Definition}\n`;
+      }
+      
+      // Answer (for specific queries like "how tall is...")
+      if (data.Answer) {
+        result += `\n**Answer**: ${data.Answer}\n`;
+      }
+      
+      // Related topics
+      if (data.RelatedTopics && data.RelatedTopics.length > 0) {
+        result += `\n**Related Topics**:\n`;
+        const topics = data.RelatedTopics.slice(0, 5);
+        for (const topic of topics) {
+          if (topic.Text) {
+            result += `• ${topic.Text.slice(0, 200)}${topic.Text.length > 200 ? "..." : ""}\n`;
+          }
+        }
+      }
+      
+      // If no results found
+      if (!result) {
+        return `No instant answers found for "${query}". Try rephrasing your query or use more specific terms.`;
+      }
+      
+      return `Search results for "${query}":\n\n${result}`;
+    } catch (error) {
+      return `Error searching: ${error.message}. Note: Web search requires an internet connection.`;
+    }
+  },
+  {
+    name: "web_search",
+    description: "Search the web for information. Use this to look up facts, definitions, current information, or anything not in local files.",
+    schema: z.object({
+      query: z.string().describe("The search query"),
+    }),
+  }
+);
+
+// ============================================================================
 // TOOL COLLECTIONS
-// ============================================================
+// ============================================================================
+/**
+ * We organize tools into groups for different purposes:
+ * 
+ * ALL TOOLS - Every tool available
+ * SAFE TOOLS - Tools that can run without approval
+ * DANGEROUS TOOLS - Tools that need user approval
+ */
 
-export const safeTools = [
-  calculatorTool,
-  weatherTool,
+/**
+ * All available tools
+ */
+export const allTools = [
   readFileTool,
-  listDirTool,
-  getCurrentTimeTool,
+  writeFileTool,
+  listDirectoryTool,
+  deleteFileTool,
+  shellCommandTool,
+  searchFilesTool,
+  calculatorTool,
   webSearchTool,
 ];
 
-export const dangerousTools = [
-  writeFileTool,
-  shellTool,
-  deleteFileTool,
-  httpRequestTool,
-];
-
-export const allTools = [...safeTools, ...dangerousTools];
+/**
+ * Safe tools - can be run automatically without user approval
+ * 
+ * These only read data or perform harmless operations.
+ */
+export const safeTools = allTools.filter(
+  (tool) => !config.dangerousTools.includes(tool.name)
+);
 
 /**
- * Get a tool by name
+ * Dangerous tools - require user approval
+ * 
+ * These can modify files, run commands, or have other side effects.
+ */
+export const dangerousTools = allTools.filter(
+  (tool) => config.dangerousTools.includes(tool.name)
+);
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Check if a tool is dangerous (requires approval)
+ * 
+ * @param {string} toolName - Name of the tool
+ * @returns {boolean} True if dangerous
+ */
+export function isDangerousTool(toolName) {
+  return config.dangerousTools.includes(toolName);
+}
+
+/**
+ * Get a tool by its name
+ * 
  * @param {string} name - Tool name
+ * @returns {Tool|undefined} The tool or undefined
  */
 export function getToolByName(name) {
   return allTools.find((t) => t.name === name);
 }
 
 /**
- * Check if a tool is dangerous
- * @param {string} name - Tool name
+ * Get tool names as a formatted string (for prompts)
  */
-export function isDangerousTool(name) {
-  return config.dangerousTools.includes(name);
+export function getToolDescriptions() {
+  return allTools
+    .map((t) => {
+      const danger = isDangerousTool(t.name) ? "⚠️ " : "";
+      return `${danger}${t.name}: ${t.description}`;
+    })
+    .join("\n");
 }
+
+// ============================================================================
+// 📝 WHAT'S NEXT?
+// ============================================================================
+/**
+ * Great! You now understand:
+ *   ✅ What tools are (functions the LLM can call)
+ *   ✅ How to define tools with name, description, and schema
+ *   ✅ The difference between safe and dangerous tools
+ *   ✅ Why dangerous tools need approval (they can change things!)
+ * 
+ * ➡️  NEXT: Read planner.js (5/11) to see the Planner node
+ */
