@@ -1,5 +1,5 @@
 {
-  "name": "apex-ai-cli",
+  "name": "Apex-cli",
   "version": "1.0.0",
   "description": "Powerful AI-powered CLI tool with LangGraph agents and persistent memory",
   "main": "src/index.js",
