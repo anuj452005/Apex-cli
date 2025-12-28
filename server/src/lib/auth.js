@@ -16,9 +16,14 @@ export const auth = betterAuth({
     ],
     advanced: {
         useSecureCookies: true,
-        crossSubdomainCookies: {
-            enabled: true,
-        },
+        cookies: {
+            state: {
+                attributes: {
+                    sameSite: "none",
+                    secure: true,
+                }
+            }
+        }
     },
     plugins: [
         deviceAuthorization({
