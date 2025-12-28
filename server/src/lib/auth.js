@@ -6,16 +6,18 @@ import prisma from "./db.js";
 
 export const auth = betterAuth({
     baseURL: process.env.BETTER_AUTH_URL || "https://apex-cli.onrender.com",
-    advanced: {
-        crossSiteCookies: true,
-    },
+    secret: process.env.BETTER_AUTH_SECRET,
     database: prismaAdapter(prisma, {
         provider: "postgresql",
     }),
     trustedOrigins: [
-        process.env.FRONTEND_URL || "https://apex-cli-fr.vercel.app",
+        "https://apex-cli-fr.vercel.app",
         "https://apex-cli.onrender.com"
     ],
+    advanced: {
+        trustProxy: true,
+        crossSiteCookies: true,
+    },
     plugins: [
         deviceAuthorization({
             expiresIn: "30m",

@@ -7,7 +7,9 @@ import { auth } from "./lib/auth.js";
 dotenv.config();
 
 const app = express();
-app.set('trust proxy', true);
+app.set('trust proxy', 1);
+
+app.get("/", (req, res) => res.json({ status: "Apex API Running", timestamp: new Date() }));
 
 app.use(
     cors({
