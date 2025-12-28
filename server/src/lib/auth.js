@@ -8,12 +8,12 @@ export const auth = betterAuth({
     database: prismaAdapter(prisma, {
         provider: "postgresql",
     }),
-    trustedOrigins: ["http://localhost:3000"],
+    trustedOrigins: [process.env.FRONTEND_URL || "https://apex-cli-fr.vercel.app"],
     plugins: [
         deviceAuthorization({
             expiresIn: "30m",
             interval : "5s",
-            verificationUri: "http://localhost:3000/device",
+            verificationUri: `${process.env.FRONTEND_URL || "https://apex-cli-fr.vercel.app"}/device`,
         })
     ],
     socialProviders:{

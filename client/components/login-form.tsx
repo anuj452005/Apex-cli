@@ -32,8 +32,8 @@ export function LoginForm() {
             const callbackUrl = searchParams.get("callbackUrl");
 
             const finalCallbackUrl = callbackUrl
-                ? `http://localhost:3000/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`
-                : process.env.NEXT_PUBLIC_AUTH_CALLBACK_URL || "http://localhost:3000";
+                ? `https://apex-cli-fr.vercel.app/sign-in?callbackUrl=${encodeURIComponent(callbackUrl)}`
+                : process.env.NEXT_PUBLIC_AUTH_CALLBACK_URL || "https://apex-cli-fr.vercel.app";
 
             await authClient.signIn.social({
                 provider,
