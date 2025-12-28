@@ -3,11 +3,11 @@ import { authClient } from "@/lib/auth-client"
 import type React from "react"
 
 import { useRouter, useSearchParams } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { ShieldAlert } from "lucide-react"
 import { Spinner } from "@/components/ui/spinner"
 
-export default function DeviceAuthorizationPage() {
+function DeviceAuthorizationContent() {
   const { data, isPending } = authClient.useSession()
   const [userCode, setUserCode] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -17,7 +17,6 @@ export default function DeviceAuthorizationPage() {
 
   useEffect(() => {
     if (!isPending && !data?.session && !data?.user) {
-
       const currentUrl = window.location.href
       const callbackUrl = encodeURIComponent(currentUrl)
       router.push(`/sign-in?callbackUrl=${callbackUrl}`)
@@ -85,7 +84,6 @@ export default function DeviceAuthorizationPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-md">
-        { }
         <div className="flex flex-col items-center gap-4 mb-8">
           <div className="p-3 rounded-lg border-2 border-dashed border-zinc-700">
             <ShieldAlert className="w-8 h-8 text-yellow-300" />
@@ -96,13 +94,11 @@ export default function DeviceAuthorizationPage() {
           </div>
         </div>
 
-        { }
         <form
           onSubmit={handleSubmit}
           className="border-2 border-dashed border-zinc-700 rounded-xl p-8 bg-zinc-950 backdrop-blur-sm"
         >
           <div className="space-y-6">
-            { }
             <div>
               <label htmlFor="code" className="block text-sm font-medium text-foreground mb-2">
                 Device Code
@@ -119,12 +115,10 @@ export default function DeviceAuthorizationPage() {
               <p className="text-xs text-muted-foreground mt-2">Find this code on the device you want to authorize</p>
             </div>
 
-            { }
             {error && (
               <div className="p-3 rounded-lg bg-red-950 border border-red-900 text-red-200 text-sm">{error}</div>
             )}
 
-            { }
             <button
               type="submit"
               disabled={isLoading || userCode.length < 9}
@@ -133,7 +127,6 @@ export default function DeviceAuthorizationPage() {
               {isLoading ? "Verifying..." : "Continue"}
             </button>
 
-            { }
             <div className="p-4 bg-zinc-900 border-2 border-dashed border-zinc-700 rounded-lg">
               <p className="text-xs text-muted-foreground leading-relaxed">
                 This code is unique to your device and will expire shortly. Keep it confidential and never share it with
@@ -144,5 +137,17 @@ export default function DeviceAuthorizationPage() {
         </form>
       </div>
     </div>
+  )
+}
+
+export default function DeviceAuthorizationPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center h-screen bg-background">
+        <Spinner />
+      </div>
+    }>
+      <DeviceAuthorizationContent />
+    </Suspense>
   )
 }
