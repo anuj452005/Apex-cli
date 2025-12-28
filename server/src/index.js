@@ -7,7 +7,7 @@ import { auth } from "./lib/auth.js";
 dotenv.config();
 
 const app = express();
-app.set('trust proxy', 1);
+app.set('trust proxy', true);
 
 app.use(
     cors({
@@ -17,7 +17,7 @@ app.use(
     })
 );
 
-app.all("/api/auth/*path", toNodeHandler(auth));
+app.use("/api/auth", toNodeHandler(auth));
 app.use(express.json());
 
 app.get("/api/health",async (req,res)=>{
