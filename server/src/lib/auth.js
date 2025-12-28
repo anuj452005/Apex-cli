@@ -5,7 +5,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import prisma from "./db.js";
 
 export const auth = betterAuth({
-    baseURL: process.env.BETTER_AUTH_URL || "https://apex-cli.onrender.com",
+    baseURL: (process.env.BETTER_AUTH_URL || "https://apex-cli.onrender.com").replace(/\/$/, ""),
     secret: process.env.BETTER_AUTH_SECRET,
     database: prismaAdapter(prisma, {
         provider: "postgresql",
@@ -17,7 +17,6 @@ export const auth = betterAuth({
     advanced: {
         useSecureCookies: true,
         trustProxy: true,
-        crossSiteCookies: true,
     },
     plugins: [
         deviceAuthorization({

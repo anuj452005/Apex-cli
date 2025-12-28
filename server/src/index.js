@@ -20,7 +20,7 @@ app.use(
     })
 );
 
-app.all("/api/auth/*path", toNodeHandler(auth));
+app.all("/api/auth/*", toNodeHandler(auth));
 app.use(express.json());
 
 app.get("/api/health",async (req,res)=>{
