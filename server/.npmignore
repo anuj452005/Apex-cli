@@ -1,0 +1,15 @@
+# Exclude development files from NPM package
+node_modules/
+.env
+.env.*
+prisma/
+*.log
+.git/
+.gitignore
+.next/
+client/
+docs/
+README.md
+task.md
+implementation_plan.md
+walkthrough.md

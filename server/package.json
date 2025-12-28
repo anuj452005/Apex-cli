@@ -1,19 +1,32 @@
 {
-  "name": "server",
+  "name": "apex-ai-cli",
   "version": "1.0.0",
-  "description": "",
+  "description": "Powerful AI-powered CLI tool with LangGraph agents and persistent memory",
   "main": "src/index.js",
   "bin": {
     "apex": "src/cli/main.js"
   },
+  "files": [
+    "src/cli/**/*",
+    "src/lib/**/*",
+    "src/config/**/*",
+    "package.json"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
     "build": "npx prisma generate"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "cli",
+    "ai",
+    "langgraph",
+    "agent",
+    "chatbot",
+    "developer-tools"
+  ],
+  "author": "Anuj Tripathi",
   "license": "ISC",
   "type": "module",
   "dependencies": {
