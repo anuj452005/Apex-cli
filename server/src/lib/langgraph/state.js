@@ -53,9 +53,21 @@ export const AgentState = Annotation.Root({
     reducer: (_, newMode) => newMode,
     default: () => "agent",
   }),
+
+  // Context summary from older conversation messages
+  contextSummary: Annotation({
+    reducer: (_, newSummary) => newSummary,
+    default: () => null,
+  }),
+
+  // Session ID for persistent memory
+  sessionId: Annotation({
+    reducer: (_, newId) => newId,
+    default: () => null,
+  }),
 });
 
-export function createInitialState(mode = "agent") {
+export function createInitialState(mode = "agent", sessionId = null) {
   return {
     messages: [],
     plan: null,
@@ -67,6 +79,8 @@ export function createInitialState(mode = "agent") {
     iterations: 0,
     error: null,
     mode,
+    contextSummary: null,
+    sessionId,
   };
 }
 

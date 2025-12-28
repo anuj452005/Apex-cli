@@ -84,3 +84,58 @@ model DeviceCode {
 
   @@map("deviceCode")
 }
+
+// ============================================
+// CONVERSATION MEMORY MODELS
+// ============================================
+
+model Conversation {
+  id              String    @id @default(cuid())
+  sessionId       String    @unique
+  userId          String?
+  title           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  messages        ConversationMessage[]
+  summary         ConversationSummary?
+  
+  @@index([userId])
+  @@index([sessionId])
+  @@map("conversation")
+}
+
+model ConversationMessage {
+  id              String    @id @default(cuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  role            String    // "human", "ai", "system", "tool"
+  content         String    
+  toolCalls       Json?     // Store tool call metadata
+  toolCallId      String?   // For tool response messages
+  
+  tokenCount      Int?      // Optional: track tokens for optimization
+  summarized      Boolean   @default(false) // Marked true when included in summary
+  
+  createdAt       DateTime  @default(now())
+  
+  @@index([conversationId])
+  @@index([createdAt])
+  @@map("conversation_message")
+}
+
+model ConversationSummary {
+  id              String    @id @default(cuid())
+  conversationId  String    @unique
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  content         String    // The summarized context
+  messagesCount   Int       // How many messages were summarized
+  lastMessageId   String?   // Last message ID included in summary
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@map("conversation_summary")
+}

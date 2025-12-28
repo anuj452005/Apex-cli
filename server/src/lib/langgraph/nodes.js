@@ -31,8 +31,24 @@ export async function simpleAgentNode(state) {
       };
     }
 
+    // Build message context with system prompt
     const systemMessage = new SystemMessage(SYSTEM_PROMPT);
-    const allMessages = [systemMessage, ...state.messages];
+    
+    // Build context messages array
+    let contextMessages = [systemMessage];
+    
+    // Inject context summary if available (from older conversation history)
+    if (state.contextSummary) {
+      const summaryMessage = new SystemMessage(
+        `📋 **Previous Conversation Context:**\n${state.contextSummary}\n\n` +
+        `(The above is a summary of our earlier conversation. Continue from where we left off.)`
+      );
+      contextMessages.push(summaryMessage);
+      console.log(chalk.gray("   📚 Loaded conversation context summary"));
+    }
+    
+    // Add recent messages (from sliding window)
+    const allMessages = [...contextMessages, ...state.messages];
 
     let _llmWithTools = null;
     if (!_llmWithTools) {

@@ -42,7 +42,7 @@ export const config = {
 
   maxOutputTokens: 2048,
 
-  maxIterations: 15,
+  maxIterations: 30,
 
   maxRetries: 3,
 
@@ -57,6 +57,21 @@ export const config = {
 
   configDir: CONFIG_DIR,
   configFile: CONFIG_FILE,
+
+  // Memory configuration for sliding window and summarization
+  memory: {
+    // Number of recent messages to include in LLM context
+    windowSize: parseInt(getConfigValue("APEX_MEMORY_WINDOW_SIZE", "10")),
+    
+    // Number of messages that triggers automatic summarization
+    summarizationThreshold: parseInt(getConfigValue("APEX_SUMMARIZATION_THRESHOLD", "20")),
+    
+    // Enable/disable automatic summarization
+    enableSummarization: getConfigValue("APEX_ENABLE_SUMMARIZATION", "true") === "true",
+    
+    // Use PostgreSQL for persistence (vs file-based MemorySaver)
+    useDatabase: getConfigValue("APEX_USE_DATABASE_MEMORY", "true") === "true",
+  },
 };
 
 export const SYSTEM_PROMPT = `You are Apex, an AI coding assistant.
