@@ -15,7 +15,7 @@ import prisma from "../../../lib/db.js";
 
 dotenv.config();
 
-const DEMO_URL = "http://localhost:5000";
+const DEMO_URL = process.env.APEX_SERVER_URL || "https://apex-cli.onrender.com";
 const CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const CONFIG_DIR = path.join(os.homedir(), ".better-auth");
 const TOKEN_FILE = path.join(CONFIG_DIR, "token.json");
