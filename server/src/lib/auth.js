@@ -15,6 +15,7 @@ export const auth = betterAuth({
         "https://apex-cli.onrender.com"
     ],
     advanced: {
+        useSecureCookies: true,
         trustProxy: true,
         crossSiteCookies: true,
     },

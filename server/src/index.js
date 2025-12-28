@@ -7,7 +7,8 @@ import { auth } from "./lib/auth.js";
 dotenv.config();
 
 const app = express();
-app.set('trust proxy', 1);
+app.set('trust proxy', true);
+console.log("Auth Environment - BETTER_AUTH_SECRET:", !!process.env.BETTER_AUTH_SECRET, "BETTER_AUTH_URL:", process.env.BETTER_AUTH_URL);
 
 app.get("/", (req, res) => res.json({ status: "Apex API Running", timestamp: new Date() }));
 
@@ -19,7 +20,7 @@ app.use(
     })
 );
 
-app.use("/api/auth", toNodeHandler(auth));
+app.all("/api/auth/*path", toNodeHandler(auth));
 app.use(express.json());
 
 app.get("/api/health",async (req,res)=>{
