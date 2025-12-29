@@ -17,7 +17,30 @@ export const auth = betterAuth({
     advanced: {
         useSecureCookies: true,
         cookies: {
+            sessionToken: {
+                attributes: {
+                    sameSite: "none",
+                    secure: true,
+                    path: "/",
+                    httpOnly: true,
+                }
+            },
             state: {
+                attributes: {
+                    sameSite: "none",
+                    secure: true,
+                    path: "/",
+                    httpOnly: true,
+                }
+            },
+            csrfToken: {
+                attributes: {
+                    sameSite: "none",
+                    secure: true,
+                    path: "/",
+                }
+            },
+            pkCodeVerifier: {
                 attributes: {
                     sameSite: "none",
                     secure: true,
