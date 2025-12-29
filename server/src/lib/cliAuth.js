@@ -9,6 +9,7 @@ import prisma from "./db.js";
 // Does NOT include social providers to prevent state collision with web auth
 export const cliAuth = betterAuth({
     baseURL: (process.env.BETTER_AUTH_URL || "https://apex-cli.onrender.com").replace(/\/$/, ""),
+    basePath: "/api/cli-auth",  // Custom basePath for CLI auth routes
     secret: process.env.BETTER_AUTH_SECRET,
     database: prismaAdapter(prisma, {
         provider: "postgresql",
