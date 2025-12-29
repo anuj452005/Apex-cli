@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/lib/auth-client";
+import { cliAuthClient } from "@/lib/cli-auth-client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CheckCircle, XCircle, Smartphone } from "lucide-react";
@@ -40,7 +41,7 @@ export default function DeviceApprovalContent() {
     setIsProcessing({ approve: true, deny: false });
     try {
       toast.loading("Approving device...", { id: "loading" });
-      await authClient.device.approve({ userCode: userCode! });
+      await cliAuthClient.device.approve({ userCode: userCode! });
       toast.dismiss("loading");
       toast.success("Device approved successfully!");
       router.push("/");
@@ -54,7 +55,7 @@ export default function DeviceApprovalContent() {
     setIsProcessing({ approve: false, deny: true });
     try {
       toast.loading("Denying device...", { id: "deny" });
-      await authClient.device.deny({ userCode: userCode! });
+      await cliAuthClient.device.deny({ userCode: userCode! });
       toast.dismiss("deny");
       toast.success("Oops! Device denied to approve!");
       router.push("/");

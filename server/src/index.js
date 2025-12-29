@@ -2,7 +2,8 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
-import { auth } from "./lib/auth.js";
+import { webAuth } from "./lib/webAuth.js";
+import { cliAuth } from "./lib/cliAuth.js";
 
 dotenv.config();
 
@@ -20,20 +21,28 @@ app.use(
     })
 );
 
-app.all("/api/auth/*path", toNodeHandler(auth));
+// Web authentication routes (Google, GitHub OAuth)
+// Used by browser-based frontend login
+app.all("/api/auth/*path", toNodeHandler(webAuth));
+
+// CLI authentication routes (Device Authorization)
+// Used by CLI login - separate to prevent state collision with web auth
+app.all("/api/cli-auth/*path", toNodeHandler(cliAuth));
+
 app.use(express.json());
 
-app.get("/api/health",async (req,res)=>{
-    const session=await auth.api.getSession({
+app.get("/api/health", async (req, res) => {
+    const session = await webAuth.api.getSession({
         headers: fromNodeHeaders(req.headers),
     })
     return res.json(session)
 })
 
-app.get("/device",async  (req,res)=>{
-    const {user_code}=req.query;
+app.get("/device", async (req, res) => {
+    const { user_code } = req.query;
     res.redirect(`${process.env.FRONTEND_URL}/device?user_code=${user_code}`)
 })
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

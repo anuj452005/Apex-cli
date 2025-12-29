@@ -1,5 +1,6 @@
 "use client"
 import { authClient } from "@/lib/auth-client"
+import { cliAuthClient } from "@/lib/cli-auth-client"
 import type React from "react"
 
 import { useRouter, useSearchParams } from "next/navigation"
@@ -59,7 +60,7 @@ function DeviceAuthorizationContent() {
     try {
       const formattedCode = userCode.trim().replace(/-/g, "").toUpperCase()
 
-      const response = await authClient.device({
+      const response = await cliAuthClient.device({
         query: { user_code: formattedCode },
       })
 

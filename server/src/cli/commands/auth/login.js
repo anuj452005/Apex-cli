@@ -136,6 +136,7 @@ export async function loginAction(opts) {
 
   const authClient = createAuthClient({
     baseURL: serverUrl,
+    basePath: "/api/cli-auth",  // Use CLI-specific auth endpoint
     plugins: [deviceAuthorizationClient()],
   });
 
