@@ -1,4 +1,3 @@
-
 import { Command } from "commander";
 import readline from "readline";
 import chalk from "chalk";
@@ -8,7 +7,6 @@ import { requireAuth } from "./auth/login.js";
 import { config } from "../../config/google.config.js";
 
 async function chatAction(options) {
-
   await requireAuth();
 
   console.log(chalk.cyan("\n═══════════════════════════════════"));
@@ -61,11 +59,28 @@ async function chatAction(options) {
       }
 
       isProcessing = true;
-      console.log(chalk.gray("\nThinking..."));
+      process.stdout.write(chalk.gray("\nThinking..."));
 
       try {
-        const result = await session.chat(trimmed);
-        console.log(chalk.cyan("\nAI: ") + result.response + "\n");
+        let firstToken = false;
+        const result = await session.chat(trimmed, {
+          onToken: (token) => {
+            if (!firstToken) {
+              // Clear "Thinking..." line
+              process.stdout.write("\r\x1b[K");
+              console.log(chalk.cyan("AI: "));
+              firstToken = true;
+            }
+            process.stdout.write(chalk.white(token));
+          },
+        });
+
+        if (firstToken) {
+          console.log("\n");
+        } else {
+          process.stdout.write("\r\x1b[K");
+          console.log(chalk.cyan("AI: ") + result.response + "\n");
+        }
       } catch (error) {
         console.error(chalk.red(`\n❌ Error: ${error.message}\n`));
       }

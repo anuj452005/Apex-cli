@@ -1,4 +1,3 @@
-
 import { Command } from "commander";
 import readline from "readline";
 import chalk from "chalk";
@@ -17,7 +16,9 @@ function createSpinner(text) {
     start: (newText) => {
       const displayText = newText || text;
       interval = setInterval(() => {
-        process.stdout.write(`\r${chalk.cyan(frames[i])} ${chalk.gray(displayText)}    `);
+        process.stdout.write(
+          `\r${chalk.cyan(frames[i])} ${chalk.gray(displayText)}    `,
+        );
         i = (i + 1) % frames.length;
       }, 80);
     },
@@ -28,9 +29,13 @@ function createSpinner(text) {
       if (interval) {
         clearInterval(interval);
         if (finalText) {
-          process.stdout.write(`\r${finalText}                              \n`);
+          process.stdout.write(
+            `\r${finalText}                              \n`,
+          );
         } else {
-          process.stdout.write(`\r                                           \r`);
+          process.stdout.write(
+            `\r                                           \r`,
+          );
         }
       }
     },
@@ -56,7 +61,9 @@ function formatAgentResponse(content) {
   formatted = formatted.replace(/`([^`]+)`/g, (_, code) => chalk.yellow(code));
 
   // Style bold
-  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, (_, text) => chalk.bold(text));
+  formatted = formatted.replace(/\*\*([^*]+)\*\*/g, (_, text) =>
+    chalk.bold(text),
+  );
 
   // Indent each line
   return formatted
@@ -72,18 +79,33 @@ function handleError(error, verbose) {
   console.error(chalk.red(`\n❌ Error: ${error.message}`));
 
   if (verbose) {
-    console.error(chalk.gray(`   Stack: ${error.stack?.split("\n")[1] || "N/A"}`));
+    console.error(
+      chalk.gray(`   Stack: ${error.stack?.split("\n")[1] || "N/A"}`),
+    );
   }
 
   // Provide helpful suggestions based on error type
   if (error.message.includes("API") || error.message.includes("key")) {
-    console.log(chalk.gray("\n   💡 Fix: Run 'apex config set GOOGLE_API_KEY <your-key>'"));
+    console.log(
+      chalk.gray(
+        "\n   💡 Fix: Run 'apex config set GOOGLE_API_KEY <your-key>'",
+      ),
+    );
   } else if (error.message.includes("rate") || error.message.includes("429")) {
-    console.log(chalk.yellow("\n   💡 Rate limited. Wait a moment and try again."));
-  } else if (error.message.includes("network") || error.message.includes("ECONNREFUSED")) {
-    console.log(chalk.yellow("\n   💡 Network error. Check your internet connection."));
+    console.log(
+      chalk.yellow("\n   💡 Rate limited. Wait a moment and try again."),
+    );
+  } else if (
+    error.message.includes("network") ||
+    error.message.includes("ECONNREFUSED")
+  ) {
+    console.log(
+      chalk.yellow("\n   💡 Network error. Check your internet connection."),
+    );
   } else if (error.message.includes("timeout")) {
-    console.log(chalk.yellow("\n   💡 Request timed out. Try a simpler query."));
+    console.log(
+      chalk.yellow("\n   💡 Request timed out. Try a simpler query."),
+    );
   }
 }
 
@@ -137,7 +159,9 @@ async function agentAction(options) {
     if (deleted) {
       console.log(chalk.green(`\n✅ Deleted session: ${options.delete}\n`));
     } else {
-      console.log(chalk.red(`\n❌ Could not delete session: ${options.delete}\n`));
+      console.log(
+        chalk.red(`\n❌ Could not delete session: ${options.delete}\n`),
+      );
     }
     return;
   }
@@ -145,10 +169,13 @@ async function agentAction(options) {
   // ─────────────────────────────────────────────────────────────────────────
   // START INTERACTIVE AGENT
   // ─────────────────────────────────────────────────────────────────────────
-  const modeLabel = mode === "agent" ? "Full Agent (Plan→Execute→Reflect)" : "Simple Chat";
+  const modeLabel =
+    mode === "agent" ? "Full Agent (Plan→Execute→Reflect)" : "Simple Chat";
   sectionHeader(`🤖 Apex Agent - ${modeLabel}`);
 
-  console.log(chalk.gray("\nAn AI agent with tool access and human-in-the-loop.\n"));
+  console.log(
+    chalk.gray("\nAn AI agent with tool access and human-in-the-loop.\n"),
+  );
 
   // Display available tools
   const safeToolNames = allTools
@@ -182,7 +209,9 @@ async function agentAction(options) {
   try {
     session = new AgentSession(options.session, mode);
   } catch (error) {
-    console.error(chalk.red(`\n❌ Failed to initialize session: ${error.message}\n`));
+    console.error(
+      chalk.red(`\n❌ Failed to initialize session: ${error.message}\n`),
+    );
     return;
   }
 
@@ -248,9 +277,13 @@ async function agentAction(options) {
         try {
           session = new AgentSession(null, mode);
           console.log(chalk.yellow("\n🔄 Session cleared. Starting fresh."));
-          console.log(chalk.gray(`   New session: ${session.getSessionInfo().sessionId}`));
+          console.log(
+            chalk.gray(`   New session: ${session.getSessionInfo().sessionId}`),
+          );
         } catch (error) {
-          console.log(chalk.red(`\n❌ Failed to create new session: ${error.message}`));
+          console.log(
+            chalk.red(`\n❌ Failed to create new session: ${error.message}`),
+          );
         }
         askQuestion();
         return;
@@ -266,8 +299,12 @@ async function agentAction(options) {
         console.log(chalk.cyan("🔧 Available Tools:"));
         allTools.forEach((tool) => {
           const icon = config.dangerousTools.includes(tool.name) ? "⚠️" : "✓";
-          const color = config.dangerousTools.includes(tool.name) ? chalk.yellow : chalk.green;
-          console.log(`   ${icon} ${color(tool.name)} - ${chalk.gray(tool.description)}`);
+          const color = config.dangerousTools.includes(tool.name)
+            ? chalk.yellow
+            : chalk.green;
+          console.log(
+            `   ${icon} ${color(tool.name)} - ${chalk.gray(tool.description)}`,
+          );
         });
         askQuestion();
         return;
@@ -302,14 +339,27 @@ async function agentAction(options) {
       try {
         // Invoke the agent
         const startTime = Date.now();
-        const result = await session.chat(trimmed);
+        let firstToken = false;
+
+        const result = await session.chat(trimmed, {
+          onToken: (token) => {
+            if (!firstToken) {
+              spinner.stop();
+              console.log(chalk.cyan("\n🤖 Agent:\n"));
+              firstToken = true;
+            }
+            process.stdout.write(chalk.white(token));
+          },
+        });
         const duration = ((Date.now() - startTime) / 1000).toFixed(1);
 
-        spinner.stop();
-
-        // Display response
-        console.log(chalk.cyan("\n🤖 Agent:"));
-        console.log(formatAgentResponse(result.response));
+        if (!firstToken) {
+          spinner.stop();
+          console.log(chalk.cyan("\n🤖 Agent:"));
+          console.log(formatAgentResponse(result.response));
+        } else {
+          console.log("\n");
+        }
 
         // Show metadata in verbose mode or if there were multiple iterations
         if (verbose || result.iterations > 1) {
@@ -318,7 +368,9 @@ async function agentAction(options) {
             console.log(chalk.gray(`   📊 Iterations: ${result.iterations}`));
           }
           if (result.plan) {
-            console.log(chalk.gray(`   📋 Plan: ${result.plan.steps?.length || 0} steps`));
+            console.log(
+              chalk.gray(`   📋 Plan: ${result.plan.steps?.length || 0} steps`),
+            );
           }
           console.log(chalk.gray(`   ⏱️  Duration: ${duration}s`));
         }
@@ -326,7 +378,6 @@ async function agentAction(options) {
         if (result.error) {
           console.log(chalk.yellow(`\n   ⚠️ Note: ${result.error}`));
         }
-
       } catch (error) {
         spinner.stop();
         handleError(error, verbose);

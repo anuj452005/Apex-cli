@@ -1,4 +1,3 @@
-
 import { MemorySaver } from "@langchain/langgraph";
 import { HumanMessage, AIMessage } from "@langchain/core/messages";
 import fs from "fs";
@@ -6,17 +5,23 @@ import path from "path";
 import chalk from "chalk";
 import { v4 as uuidv4 } from "uuid";
 
-import { createAgentGraph, buildFullAgentGraph, buildSimpleChatGraph } from "./graph.js";
+import {
+  createAgentGraph,
+  buildFullAgentGraph,
+  buildSimpleChatGraph,
+} from "./graph.js";
 import { createInitialState } from "./state.js";
 import { config } from "../../config/google.config.js";
 
 // Import memory module
-import { conversationStore, SlidingWindowManager, ConversationSummarizer } from "./memory/index.js";
+import {
+  conversationStore,
+  SlidingWindowManager,
+  ConversationSummarizer,
+} from "./memory/index.js";
 
 export class AgentSession {
-
   constructor(sessionId = null, mode = "agent") {
-
     this.sessionId = sessionId || this.generateSessionId();
     this.mode = mode;
 
@@ -28,13 +33,13 @@ export class AgentSession {
     // Initialize memory managers
     this.slidingWindow = new SlidingWindowManager({
       windowSize: config.memory?.windowSize || 10,
-      includeSummary: true
+      includeSummary: true,
     });
-    
+
     this.summarizer = new ConversationSummarizer({
       threshold: config.memory?.summarizationThreshold || 20,
       keepRecent: config.memory?.windowSize || 10,
-      enabled: config.memory?.enableSummarization !== false
+      enabled: config.memory?.enableSummarization !== false,
     });
 
     // Track if using database memory
@@ -54,12 +59,18 @@ export class AgentSession {
 
     console.log(chalk.gray(`   Session initialized: ${this.sessionId}`));
     if (this.useDatabaseMemory) {
-      console.log(chalk.gray(`   📦 Database memory enabled (window: ${config.memory?.windowSize || 10})`));
+      console.log(
+        chalk.gray(
+          `   📦 Database memory enabled (window: ${config.memory?.windowSize || 10})`,
+        ),
+      );
     }
   }
 
-  async chat(userMessage) {
-    console.log(chalk.gray(`\n💬 Processing: "${userMessage.slice(0, 50)}..."`));
+  async chat(userMessage, options = {}) {
+    console.log(
+      chalk.gray(`\n💬 Processing: "${userMessage.slice(0, 50)}..."`),
+    );
 
     try {
       // Step 1: Load context from database (sliding window + summary)
@@ -67,12 +78,17 @@ export class AgentSession {
       let previousMessages = [];
 
       if (this.useDatabaseMemory) {
-        const { messages, summary, totalCount } = await this.slidingWindow.getRecentMessages(this.sessionId);
+        const { messages, summary, totalCount } =
+          await this.slidingWindow.getRecentMessages(this.sessionId);
         previousMessages = messages;
         contextSummary = summary;
-        
+
         if (totalCount > 0) {
-          console.log(chalk.gray(`   📚 Loaded ${messages.length}/${totalCount} messages from history`));
+          console.log(
+            chalk.gray(
+              `   📚 Loaded ${messages.length}/${totalCount} messages from history`,
+            ),
+          );
         }
       }
 
@@ -81,11 +97,24 @@ export class AgentSession {
         messages: [...previousMessages, new HumanMessage(userMessage)],
         mode: this.mode,
         contextSummary: contextSummary,
-        sessionId: this.sessionId
+        sessionId: this.sessionId,
       };
 
       // Step 3: Invoke the graph
-      const result = await this.graph.invoke(input, this.threadConfig);
+      const callbacks = options.onToken
+        ? [
+            {
+              handleLLMNewToken(token) {
+                options.onToken(token);
+              },
+            },
+          ]
+        : [];
+
+      const result = await this.graph.invoke(input, {
+        ...this.threadConfig,
+        callbacks,
+      });
 
       const lastMessage = result.messages[result.messages.length - 1];
       const response = lastMessage?.content || "No response";
@@ -110,7 +139,6 @@ export class AgentSession {
         stepResults: result.stepResults,
         error: result.error,
       };
-
     } catch (error) {
       console.error(chalk.red(`Session error: ${error.message}`));
       return {
@@ -127,16 +155,19 @@ export class AgentSession {
     try {
       // Save user message
       await conversationStore.addMessage(this.sessionId, {
-        role: 'human',
-        content: userMessage
+        role: "human",
+        content: userMessage,
       });
 
       // Save AI/tool messages from result
       const newMessages = result.messages || [];
       for (const msg of newMessages) {
         const role = this.getMessageRole(msg);
-        const content = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content);
-        
+        const content =
+          typeof msg.content === "string"
+            ? msg.content
+            : JSON.stringify(msg.content);
+
         // Skip empty messages
         if (!content || content === '""') continue;
 
@@ -144,11 +175,15 @@ export class AgentSession {
           role,
           content,
           toolCalls: msg.tool_calls || null,
-          toolCallId: msg.tool_call_id || null
+          toolCallId: msg.tool_call_id || null,
         });
       }
     } catch (error) {
-      console.error(chalk.yellow(`   ⚠️ Warning: Could not save to database: ${error.message}`));
+      console.error(
+        chalk.yellow(
+          `   ⚠️ Warning: Could not save to database: ${error.message}`,
+        ),
+      );
     }
   }
 
@@ -156,19 +191,19 @@ export class AgentSession {
    * Get role string from LangChain message
    */
   getMessageRole(message) {
-    const type = message._getType?.() || message.constructor?.name || 'unknown';
+    const type = message._getType?.() || message.constructor?.name || "unknown";
     const roleMap = {
-      'human': 'human',
-      'HumanMessage': 'human',
-      'ai': 'ai',
-      'AIMessage': 'ai',
-      'AIMessageChunk': 'ai',
-      'system': 'system',
-      'SystemMessage': 'system',
-      'tool': 'tool',
-      'ToolMessage': 'tool'
+      human: "human",
+      HumanMessage: "human",
+      ai: "ai",
+      AIMessage: "ai",
+      AIMessageChunk: "ai",
+      system: "system",
+      SystemMessage: "system",
+      tool: "tool",
+      ToolMessage: "tool",
     };
-    return roleMap[type] || 'ai';
+    return roleMap[type] || "ai";
   }
 
   async *stream(userMessage) {
@@ -177,7 +212,9 @@ export class AgentSession {
     let previousMessages = [];
 
     if (this.useDatabaseMemory) {
-      const { messages, summary } = await this.slidingWindow.getRecentMessages(this.sessionId);
+      const { messages, summary } = await this.slidingWindow.getRecentMessages(
+        this.sessionId,
+      );
       previousMessages = messages;
       contextSummary = summary;
     }
@@ -186,7 +223,7 @@ export class AgentSession {
       messages: [...previousMessages, new HumanMessage(userMessage)],
       mode: this.mode,
       contextSummary: contextSummary,
-      sessionId: this.sessionId
+      sessionId: this.sessionId,
     };
 
     for await (const event of this.graph.stream(input, {
@@ -199,8 +236,8 @@ export class AgentSession {
     // Save after streaming completes
     if (this.useDatabaseMemory) {
       await conversationStore.addMessage(this.sessionId, {
-        role: 'human',
-        content: userMessage
+        role: "human",
+        content: userMessage,
       });
     }
   }
@@ -237,10 +274,12 @@ export class AgentSession {
 
       fs.writeFileSync(
         this.getSessionFilePath(),
-        JSON.stringify(sessionData, null, 2)
+        JSON.stringify(sessionData, null, 2),
       );
     } catch (error) {
-      console.error(chalk.yellow(`Warning: Could not save session: ${error.message}`));
+      console.error(
+        chalk.yellow(`Warning: Could not save session: ${error.message}`),
+      );
     }
   }
 
@@ -251,7 +290,9 @@ export class AgentSession {
         return JSON.parse(fs.readFileSync(filePath, "utf-8"));
       }
     } catch (error) {
-      console.error(chalk.yellow(`Warning: Could not load session: ${error.message}`));
+      console.error(
+        chalk.yellow(`Warning: Could not load session: ${error.message}`),
+      );
     }
     return null;
   }
@@ -265,8 +306,8 @@ export class AgentSession {
       memoryConfig: {
         windowSize: config.memory?.windowSize || 10,
         summarizationThreshold: config.memory?.summarizationThreshold || 20,
-        enableSummarization: config.memory?.enableSummarization !== false
-      }
+        enableSummarization: config.memory?.enableSummarization !== false,
+      },
     };
   }
 
@@ -278,13 +319,15 @@ export class AgentSession {
       return { totalMessages: 0, hasSummary: false };
     }
 
-    const totalMessages = await conversationStore.getMessageCount(this.sessionId);
+    const totalMessages = await conversationStore.getMessageCount(
+      this.sessionId,
+    );
     const summary = await conversationStore.getSummary(this.sessionId);
 
     return {
       totalMessages,
       hasSummary: !!summary,
-      summarizedMessages: summary?.messagesCount || 0
+      summarizedMessages: summary?.messagesCount || 0,
     };
   }
 
@@ -296,8 +339,8 @@ export class AgentSession {
 
       const files = fs.readdirSync(config.sessionsDir);
       return files
-        .filter(f => f.endsWith(".json"))
-        .map(f => f.replace(".json", ""));
+        .filter((f) => f.endsWith(".json"))
+        .map((f) => f.replace(".json", ""));
     } catch (error) {
       return [];
     }
@@ -313,7 +356,7 @@ export class AgentSession {
 
       // Delete from database
       await conversationStore.deleteConversation(sessionId);
-      
+
       console.log(chalk.gray(`   🗑️ Deleted session: ${sessionId}`));
       return true;
     } catch (error) {
