@@ -1,4 +1,3 @@
-
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import chalk from "chalk";
 
@@ -10,9 +9,8 @@ export async function plannerNode(state) {
   console.log(chalk.cyan("\n📍 [Planner] Creating plan..."));
 
   try {
-
     const userMessages = state.messages.filter(
-      (m) => m._getType() === "human" || m.constructor.name === "HumanMessage"
+      (m) => m._getType() === "human" || m.constructor.name === "HumanMessage",
     );
 
     if (userMessages.length === 0) {
@@ -36,16 +34,25 @@ export async function plannerNode(state) {
       /^what\s*(can\s*you\s*do|do\s*you\s*do)[\s!.,?]*$/i,
     ];
 
-    const isSimpleQuery = simplePatterns.some(pattern => pattern.test(userRequest.trim()));
+    const isSimpleQuery = simplePatterns.some((pattern) =>
+      pattern.test(userRequest.trim()),
+    );
 
     if (isSimpleQuery) {
-      console.log(chalk.green(`   ✅ Simple query detected - responding directly`));
+      console.log(
+        chalk.green(`   ✅ Simple query detected - responding directly`),
+      );
 
       const simplePlan = {
         goal: "Respond to user's message",
         query_type: "simple",
         steps: [
-          { id: 1, description: "Respond directly to the user", tools_needed: [], status: "pending" }
+          {
+            id: 1,
+            description: "Respond directly to the user",
+            tools_needed: [],
+            status: "pending",
+          },
         ],
         estimated_complexity: "simple",
       };
@@ -74,20 +81,55 @@ ${toolDescriptions}`;
     let plan = null;
 
     try {
-
+      // First, try direct parse
       plan = JSON.parse(response.content);
     } catch (e) {
+      // If that fails, aggressively strip markdown blocks like ```json ... ```
+      let cleaned = response.content.replace(/```(?:json)?/gi, "").trim();
 
-      const jsonMatch = response.content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          plan = JSON.parse(jsonMatch[0]);
-        } catch (e2) {
-
+      try {
+        plan = JSON.parse(cleaned);
+      } catch (e2) {
+        // As a last resort, try regex match for the first JSON object block
+        const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          try {
+            plan = JSON.parse(jsonMatch[0]);
+          } catch (e3) {
+            console.log(
+              chalk.red(
+                "   ⚠️ Failed to parse plan JSON. Check model output format.",
+              ),
+            );
+            // THE FALLBACK
+            plan = {
+              goal: userRequest,
+              steps: [
+                {
+                  id: 1,
+                  description: userRequest,
+                  tools_needed: [],
+                  status: "pending",
+                },
+              ],
+              estimated_complexity: "simple",
+            };
+          }
+        } else {
+          console.log(
+            chalk.red(
+              "   ⚠️ Failed to find any JSON objects in plan response. Check model output format.",
+            ),
+          );
           plan = {
             goal: userRequest,
             steps: [
-              { id: 1, description: userRequest, tools_needed: [], status: "pending" }
+              {
+                id: 1,
+                description: userRequest,
+                tools_needed: [],
+                status: "pending",
+              },
             ],
             estimated_complexity: "simple",
           };
@@ -104,10 +146,14 @@ ${toolDescriptions}`;
       }));
     }
 
-    console.log(chalk.green(`   ✅ Created plan with ${plan?.steps?.length || 0} steps`));
+    console.log(
+      chalk.green(`   ✅ Created plan with ${plan?.steps?.length || 0} steps`),
+    );
     if (plan?.steps) {
       plan.steps.forEach((step, idx) => {
-        console.log(chalk.gray(`      ${idx + 1}. ${step.description.slice(0, 50)}...`));
+        console.log(
+          chalk.gray(`      ${idx + 1}. ${step.description.slice(0, 50)}...`),
+        );
       });
     }
 
@@ -116,7 +162,6 @@ ${toolDescriptions}`;
       currentStep: 0,
       iterations: state.iterations + 1,
     };
-
   } catch (error) {
     console.error(chalk.red(`   ❌ Planner error: ${error.message}`));
     return {
@@ -135,14 +180,16 @@ export function isAllStepsComplete(state) {
   if (!state.plan || !state.plan.steps) return true;
 
   return state.plan.steps.every(
-    (step) => state.stepResults[step.id]?.success === true
+    (step) => state.stepResults[step.id]?.success === true,
   );
 }
 
 export function getProgressString(state) {
   if (!state.plan || !state.plan.steps) return "0/0";
 
-  const completed = Object.values(state.stepResults).filter(r => r?.success).length;
+  const completed = Object.values(state.stepResults).filter(
+    (r) => r?.success,
+  ).length;
   const total = state.plan.steps.length;
 
   return `${completed}/${total}`;
